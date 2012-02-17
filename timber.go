@@ -411,9 +411,9 @@ func Println(v ...interface{})                                { Global.Println(v
 func Panic(v ...interface{})                                  { Global.Panic(v...) }
 func Panicf(format string, v ...interface{})                  { Global.Panicf(format, v...) }
 func Panicln(v ...interface{})                                { Global.Panicln(v...) }
-func Fatal(v ...interface{})                                  { Global.Print(v...) }
-func Fatalf(format string, v ...interface{})                  { Global.Printf(format, v...) }
-func Fatalln(v ...interface{})                                { Global.Println(v...) }
+func Fatal(v ...interface{})                                  { Global.Fatal(v...) }
+func Fatalf(format string, v ...interface{})                  { Global.Fatalf(format, v...) }
+func Fatalln(v ...interface{})                                { Global.Fatalln(v...) }
 
 func AddLogger(logger ConfigLogger) int { return Global.AddLogger(logger) }
 func Close()                            { Global.Close() }
