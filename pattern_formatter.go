@@ -3,9 +3,9 @@ package timber
 import (
 	"bytes"
 	"fmt"
-	"time"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var prefixRegexp = regexp.MustCompile(`^[\-+]?[0-9]+`)
@@ -164,7 +164,7 @@ func (pf *PatFormatter) Format(rec LogRecord) string {
 }
 
 func (pf *PatFormatter) getDynamic(rec LogRecord) []interface{} {
-	tm := time.NanosecondsToLocalTime(rec.Timestamp)
+	tm := time.Unix(0, rec.Timestamp)
 	ret := make([]interface{}, 0, 10)
 	for _, dyn := range pf.formatDynamic {
 		switch dyn {
@@ -203,14 +203,14 @@ func parseSourceXShort(file string) string {
 	return file[strings.LastIndex(file, "/")+1 : (len(file) - 3)]
 }
 
-func parseDate(t *time.Time) []interface{} {
-	return []interface{}{t.Year, t.Month, t.Day}
+func parseDate(t time.Time) []interface{} {
+	return []interface{}{t.Year(), t.Month(), t.Day()}
 }
 
-func parseTime(t *time.Time) []interface{} {
-	return []interface{}{t.Hour, t.Minute, t.Second}
+func parseTime(t time.Time) []interface{} {
+	return []interface{}{t.Hour(), t.Minute(), t.Second()}
 }
 
-func parseTimeMs(t *time.Time) []interface{} {
-	return []interface{}{t.Hour, t.Minute, t.Second, t.Nanosecond / 1e6}
+func parseTimeMs(t time.Time) []interface{} {
+	return []interface{}{t.Hour(), t.Minute(), t.Second(), t.Nanosecond() / 1e6}
 }

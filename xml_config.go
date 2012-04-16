@@ -1,11 +1,11 @@
 package timber
 
 import (
-	"xml"
+	"encoding/xml"
 	"fmt"
+	"log"
 	"os"
 	"reflect"
-	"log"
 )
 
 // These levels match log4go configuration
@@ -39,7 +39,7 @@ func (tim *Timber) LoadXMLConfig(fileName string) {
 	}
 
 	val := xmlConfig{}
-	err = xml.Unmarshal(file, &val)
+	err = xml.NewDecoder(file).Decode(&val)
 	if err != nil {
 		panic(fmt.Sprintf("TIMBER! Can't parse xml config file: %s %v", fileName, err))
 	}

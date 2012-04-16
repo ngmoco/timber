@@ -70,13 +70,15 @@
 package timber
 
 import (
-	"os"
-	"time"
-	"runtime"
+	"errors"
 	"fmt"
+	"os"
+	"runtime"
+	"time"
 )
 
 type level int
+
 // Log levels
 const (
 	NONE level = iota // NONE to be used for standard go log impl's
@@ -89,6 +91,7 @@ const (
 	ERROR
 	CRITICAL
 )
+
 // Default level passed to runtime.Caller by Timber, add to this if you wrap Timber in your own logging code  
 const DefaultFileDepth int = 3
 
@@ -105,9 +108,9 @@ type Logger interface {
 	Debug(arg0 interface{}, args ...interface{})
 	Trace(arg0 interface{}, args ...interface{})
 	Info(arg0 interface{}, args ...interface{})
-	Warn(arg0 interface{}, args ...interface{}) os.Error
-	Error(arg0 interface{}, args ...interface{}) os.Error
-	Critical(arg0 interface{}, args ...interface{}) os.Error
+	Warn(arg0 interface{}, args ...interface{}) error
+	Error(arg0 interface{}, args ...interface{}) error
+	Critical(arg0 interface{}, args ...interface{}) error
 	Log(lvl level, arg0 interface{}, args ...interface{})
 
 	// support standard log too
@@ -300,7 +303,7 @@ func (t *Timber) SetFormatter(index int, formatter LogFormatter) {
 
 // Logger interface
 func (t *Timber) prepareAndSend(lvl level, msg string, depth int) {
-	now := time.Nanoseconds()
+	now := time.Now().UnixNano()
 	_, file, line, _ := runtime.Caller(depth)
 	t.recordChan <- LogRecord{Level: lvl, Timestamp: now, SourceFile: file, SourceLine: line, Message: msg}
 }
@@ -320,20 +323,20 @@ func (t *Timber) Trace(arg0 interface{}, args ...interface{}) {
 func (t *Timber) Info(arg0 interface{}, args ...interface{}) {
 	t.prepareAndSend(INFO, fmt.Sprintf(arg0.(string), args...), t.FileDepth)
 }
-func (t *Timber) Warn(arg0 interface{}, args ...interface{}) os.Error {
+func (t *Timber) Warn(arg0 interface{}, args ...interface{}) error {
 	msg := fmt.Sprintf(arg0.(string), args...)
 	t.prepareAndSend(WARNING, msg, t.FileDepth)
-	return os.NewError(msg)
+	return errors.New(msg)
 }
-func (t *Timber) Error(arg0 interface{}, args ...interface{}) os.Error {
+func (t *Timber) Error(arg0 interface{}, args ...interface{}) error {
 	msg := fmt.Sprintf(arg0.(string), args...)
 	t.prepareAndSend(ERROR, msg, t.FileDepth)
-	return os.NewError(msg)
+	return errors.New(msg)
 }
-func (t *Timber) Critical(arg0 interface{}, args ...interface{}) os.Error {
+func (t *Timber) Critical(arg0 interface{}, args ...interface{}) error {
 	msg := fmt.Sprintf(arg0.(string), args...)
 	t.prepareAndSend(CRITICAL, msg, t.FileDepth)
-	return os.NewError(msg)
+	return errors.New(msg)
 }
 func (t *Timber) Log(lvl level, arg0 interface{}, args ...interface{}) {
 	t.prepareAndSend(lvl, fmt.Sprintf(arg0.(string), args...), t.FileDepth)
@@ -347,6 +350,7 @@ func (t *Timber) Print(v ...interface{}) {
 func (t *Timber) Printf(format string, v ...interface{}) {
 	t.prepareAndSend(NONE, fmt.Sprintf(format, v...), t.FileDepth)
 }
+
 // Println won't work well either with a pattern_logger because it explicitly adds 
 // its own \n; so you'd have to write your own formatter to not have 2 \n's
 func (t *Timber) Println(v ...interface{}) {
@@ -396,27 +400,28 @@ func (t *Timber) Fatalln(v ...interface{}) {
 var Global = NewTimber()
 
 // Simple wrappers for Logger interface
-func Finest(arg0 interface{}, args ...interface{})            { Global.Finest(arg0, args...) }
-func Fine(arg0 interface{}, args ...interface{})              { Global.Fine(arg0, args...) }
-func Debug(arg0 interface{}, args ...interface{})             { Global.Debug(arg0, args...) }
-func Trace(arg0 interface{}, args ...interface{})             { Global.Trace(arg0, args...) }
-func Info(arg0 interface{}, args ...interface{})              { Global.Info(arg0, args...) }
-func Warn(arg0 interface{}, args ...interface{}) os.Error     { return Global.Warn(arg0, args...) }
-func Error(arg0 interface{}, args ...interface{}) os.Error    { return Global.Error(arg0, args...) }
-func Critical(arg0 interface{}, args ...interface{}) os.Error { return Global.Critical(arg0, args...) }
-func Log(lvl level, arg0 interface{}, args ...interface{})    { Global.Log(lvl, arg0, args...) }
-func Print(v ...interface{})                                  { Global.Print(v...) }
-func Printf(format string, v ...interface{})                  { Global.Printf(format, v...) }
-func Println(v ...interface{})                                { Global.Println(v...) }
-func Panic(v ...interface{})                                  { Global.Panic(v...) }
-func Panicf(format string, v ...interface{})                  { Global.Panicf(format, v...) }
-func Panicln(v ...interface{})                                { Global.Panicln(v...) }
-func Fatal(v ...interface{})                                  { Global.Fatal(v...) }
-func Fatalf(format string, v ...interface{})                  { Global.Fatalf(format, v...) }
-func Fatalln(v ...interface{})                                { Global.Fatalln(v...) }
+func Finest(arg0 interface{}, args ...interface{})         { Global.Finest(arg0, args...) }
+func Fine(arg0 interface{}, args ...interface{})           { Global.Fine(arg0, args...) }
+func Debug(arg0 interface{}, args ...interface{})          { Global.Debug(arg0, args...) }
+func Trace(arg0 interface{}, args ...interface{})          { Global.Trace(arg0, args...) }
+func Info(arg0 interface{}, args ...interface{})           { Global.Info(arg0, args...) }
+func Warn(arg0 interface{}, args ...interface{}) error     { return Global.Warn(arg0, args...) }
+func Error(arg0 interface{}, args ...interface{}) error    { return Global.Error(arg0, args...) }
+func Critical(arg0 interface{}, args ...interface{}) error { return Global.Critical(arg0, args...) }
+func Log(lvl level, arg0 interface{}, args ...interface{}) { Global.Log(lvl, arg0, args...) }
+func Print(v ...interface{})                               { Global.Print(v...) }
+func Printf(format string, v ...interface{})               { Global.Printf(format, v...) }
+func Println(v ...interface{})                             { Global.Println(v...) }
+func Panic(v ...interface{})                               { Global.Panic(v...) }
+func Panicf(format string, v ...interface{})               { Global.Panicf(format, v...) }
+func Panicln(v ...interface{})                             { Global.Panicln(v...) }
+func Fatal(v ...interface{})                               { Global.Fatal(v...) }
+func Fatalf(format string, v ...interface{})               { Global.Fatalf(format, v...) }
+func Fatalln(v ...interface{})                             { Global.Fatalln(v...) }
 
 func AddLogger(logger ConfigLogger) int { return Global.AddLogger(logger) }
 func Close()                            { Global.Close() }
+
 // Match log4go to load configuration.  This could probably also be made extensible
 // but it's not worth it right now
 func LoadConfiguration(filename string) { Global.LoadXMLConfig(filename) }
