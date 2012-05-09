@@ -64,13 +64,13 @@ func (tim *Timber) LoadXMLConfig(fileName string) {
 
 }
 
-func getLevel(lvlString string) level {
+func getLevel(lvlString string) Level {
 	for idx, str := range LongLevelStrings {
 		if str == lvlString {
-			return level(idx)
+			return Level(idx)
 		}
 	}
-	return level(0)
+	return Level(0)
 }
 
 func getFormatter(filter xmlFilter) LogFormatter {

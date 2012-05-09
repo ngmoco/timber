@@ -77,11 +77,11 @@ import (
 	"time"
 )
 
-type level int
+type Level int
 
 // Log levels
 const (
-	NONE level = iota // NONE to be used for standard go log impl's
+	NONE Level = iota // NONE to be used for standard go log impl's
 	FINEST
 	FINE
 	DEBUG
@@ -111,7 +111,7 @@ type Logger interface {
 	Warn(arg0 interface{}, args ...interface{}) error
 	Error(arg0 interface{}, args ...interface{}) error
 	Critical(arg0 interface{}, args ...interface{}) error
-	Log(lvl level, arg0 interface{}, args ...interface{})
+	Log(lvl Level, arg0 interface{}, args ...interface{})
 
 	// support standard log too
 	Print(v ...interface{})
@@ -128,7 +128,7 @@ type Logger interface {
 // Not used
 type LoggerConfig interface {
 	// When set, messages with level < lvl will be ignored.  It's up to the implementor to keep the contract or not
-	SetLevel(lvl level)
+	SetLevel(lvl Level)
 	// Set the formatter for the log
 	SetFormatter(formatter LogFormatter)
 }
@@ -146,7 +146,7 @@ type LogWriter interface {
 // This packs up all the message data and metadata. This structure
 // will be passed to the LogFormatter
 type LogRecord struct {
-	Level      level
+	Level      Level
 	Timestamp  int64
 	SourceFile string
 	SourceLine int
@@ -162,7 +162,7 @@ type LogFormatter interface {
 type ConfigLogger struct {
 	LogWriter LogWriter
 	// Messages with level < Level will be ignored.  It's up to the implementor to keep the contract or not
-	Level     level
+	Level     Level
 	Formatter LogFormatter
 }
 
@@ -171,7 +171,7 @@ type MultiLogger interface {
 	// returns an int that identifies the logger for future calls to SetLevel and SetFormatter
 	AddLogger(logger ConfigLogger) int
 	// dynamically change level or format
-	SetLevel(index int, lvl level)
+	SetLevel(index int, lvl Level)
 	SetFormatter(index int, formatter LogFormatter)
 	Close()
 }
@@ -292,7 +292,7 @@ func (t *Timber) Close() {
 }
 
 // Not yet implemented
-func (t *Timber) SetLevel(index int, lvl level) {
+func (t *Timber) SetLevel(index int, lvl Level) {
 	// TODO
 }
 
@@ -302,7 +302,7 @@ func (t *Timber) SetFormatter(index int, formatter LogFormatter) {
 }
 
 // Logger interface
-func (t *Timber) prepareAndSend(lvl level, msg string, depth int) {
+func (t *Timber) prepareAndSend(lvl Level, msg string, depth int) {
 	now := time.Now().UnixNano()
 	_, file, line, _ := runtime.Caller(depth)
 	t.recordChan <- LogRecord{Level: lvl, Timestamp: now, SourceFile: file, SourceLine: line, Message: msg}
@@ -338,7 +338,7 @@ func (t *Timber) Critical(arg0 interface{}, args ...interface{}) error {
 	t.prepareAndSend(CRITICAL, msg, t.FileDepth)
 	return errors.New(msg)
 }
-func (t *Timber) Log(lvl level, arg0 interface{}, args ...interface{}) {
+func (t *Timber) Log(lvl Level, arg0 interface{}, args ...interface{}) {
 	t.prepareAndSend(lvl, fmt.Sprintf(arg0.(string), args...), t.FileDepth)
 }
 
@@ -408,7 +408,7 @@ func Info(arg0 interface{}, args ...interface{})           { Global.Info(arg0, a
 func Warn(arg0 interface{}, args ...interface{}) error     { return Global.Warn(arg0, args...) }
 func Error(arg0 interface{}, args ...interface{}) error    { return Global.Error(arg0, args...) }
 func Critical(arg0 interface{}, args ...interface{}) error { return Global.Critical(arg0, args...) }
-func Log(lvl level, arg0 interface{}, args ...interface{}) { Global.Log(lvl, arg0, args...) }
+func Log(lvl Level, arg0 interface{}, args ...interface{}) { Global.Log(lvl, arg0, args...) }
 func Print(v ...interface{})                               { Global.Print(v...) }
 func Printf(format string, v ...interface{})               { Global.Printf(format, v...) }
 func Println(v ...interface{})                             { Global.Println(v...) }
