@@ -13,22 +13,22 @@ var LongLevelStrings = []string{"NONE", "FINEST", "FINE", "DEBUG", "TRACE", "INF
 
 // match the log4go structure so i don't have to change my configs
 type xmlProperty struct {
-	Name  string `xml:"attr"`
-	Value string `xml:"chardata"`
+	Name  string `xml:"name,attr"`
+	Value string `xml:",chardata"`
 }
 type xmlFilter struct {
-	XMLName  xml.Name `xml:"filter"`
-	Tag      string
-	Enabled  bool `xml:"attr"`
-	Type     string
-	Level    string
-	Format   xmlProperty
-	Property []xmlProperty
+	XMLName  xml.Name      `xml:"filter"`
+	Tag      string        `xml:"tag"`
+	Enabled  bool          `xml:"enabled,attr"`
+	Type     string        `xml:"type"`
+	Level    string        `xml:"level"`
+	Format   xmlProperty   `xml:"format"`
+	Property []xmlProperty `xml:"property"`
 }
 
 type xmlConfig struct {
-	XMLName xml.Name `xml:"logging"`
-	Filter  []xmlFilter
+	XMLName xml.Name    `xml:"logging"`
+	Filter  []xmlFilter `xml:"filter"`
 }
 
 // Loads the configuration from an XML file (as you were probably expecting)

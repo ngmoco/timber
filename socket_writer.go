@@ -1,8 +1,8 @@
 package timber
 
 import (
-	"net"
 	"fmt"
+	"net"
 )
 
 // This should write to anything that you can write to with net.Dial
@@ -27,6 +27,7 @@ func (sw *SocketWriter) LogWrite(msg string) {
 func (sw *SocketWriter) Close() {
 	sw.conn.Close()
 }
+
 //************/
 /*************
 func NewSocketWriter(network, addr string) (LogWriter) {

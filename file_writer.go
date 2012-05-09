@@ -1,9 +1,10 @@
 package timber
 
 import (
-	"os"
 	"fmt"
+	"os"
 )
+
 /* unbuffered impl
 type FileWriter struct {
 	file io.WriteCloser

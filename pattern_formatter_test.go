@@ -1,8 +1,8 @@
 package timber
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 )
 
 func TestWorstPatternFormat(t *testing.T) {
