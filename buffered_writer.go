@@ -27,6 +27,11 @@ func (bw *BufferedWriter) LogWrite(msg string) {
 	}
 }
 
+// Force flush the buffer
+func (bw *BufferedWriter) Flush() {
+	bw.buf.Flush()
+}
+
 func (bw *BufferedWriter) Close() {
 	bw.buf.Flush()
 	bw.writer.Close()
