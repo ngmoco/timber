@@ -1,0 +1,67 @@
+// Note: Comments must be removed for "encoding/json" to properly parse JSON files
+{
+  "filters": [
+    {
+      "enabled": true,
+      "tag": "stderr",
+      "type": "console",
+      // Levels are FINEST|FINE|DEBUG|TRACE|INFO|WARNING|ERROR
+      "level": "DEBUG",
+      // Format codes:
+      // %T - Time: 17:24:05.333 HH:MM:SS.ms
+      // %t - Time: 17:24:05 HH:MM:SS
+      // %D - Date: 2011-12-25 yyyy-mm-dd
+      // %d - Date: 2011/12/25
+      // %L - Level (FNST, FINE, DEBG, TRAC, WARN, EROR, CRIT)
+      // %S - Source: full runtime.Caller line
+      // %s - Short Source: just file and line number
+      // %x - Extra Short Source: just file without .go suffix
+      // %M - Message
+      // %% - Percent sign
+      // the string number prefixes are allowed e.g.: %10s will pad the source field to 10 spaces
+      // pattern defaults to %M
+      // Setting formats can be either through filter.format or through a filter.properties item,
+      // but only support the above formats(Example included below)
+      "format": {
+        "name": "pattern",
+        "value": "[%D %T] %L %M"
+      }
+    },
+    {
+      "enabled": true,
+      "tag": "file",
+      "type": "file",
+      "level": "FINEST",
+      "properties": [
+        {
+          "name": "filename",
+          "value": "timber_test.log"
+        },
+        {
+          "name": "format",
+          "value": "[%D %T] [%L] %M"
+        }
+      ]
+    },
+    {
+      "enabled": true,
+      "tag": "syslog",
+      "type": "socket",
+      "level": "FINEST",
+      "properties": [
+        {
+          "name": "protocol",
+          "value": "udp"
+        },
+        {
+          "name": "endpoint",
+          "value": "localhost:9500"
+        },
+        {
+          "name": "format",
+          "value": "%L %M"
+        }
+      ]
+    }
+  ]
+}
