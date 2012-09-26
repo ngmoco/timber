@@ -6,7 +6,7 @@ Timber is a logger for go with a similar interface as log4go and also can be use
 Features
 --------
 * Log levels: Finest, Fine, Debug, Trace, Info, Warn, Error, Critical
-* External configuration via XML
+* External configuration via XML and JSON
 * Multiple log destinations (console, file, socket)
 * Configurable format per destination
 * Extensible and pluggable design (if you configure via code rather than XML)
@@ -26,12 +26,12 @@ The easiest way to use Timber is to use configure the built-in singleton:
 	)
 
 	func main() {
-		// load xml config
+		// load xml config, json also supported
 		log.LoadConfiguration("timber.xml")
 		log.Info("Timber!!!")
 	}
 
-An example timber.xml file is included in the package.  Timber does implement the interface of the go log package so replacing the log with Timber will work ok.
+An example timber.xml and timber.json are included in the package. Timber does implement the interface of the go log package so replacing the log with Timber will work ok.
 
 `log.Close()` should be called before your program exits to make sure all the buffers are drained and all messages are printed.
 

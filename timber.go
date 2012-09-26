@@ -1,6 +1,6 @@
 // This is a brand new logger implementation that matches the log4go interface and also may be
 // used as a drop-in replacement for the standard logger
-// 
+//
 // Basic use:
 //   import log "timber"
 //   log.LoadConfiguration("timber.xml")
@@ -27,10 +27,10 @@
 //			<level>FINEST</level>
 //			<property name="protocol">unixgram</property>
 //			<property name="endpoint">/dev/log</property>
-//		    <format name="pattern">%L %M</property> 
+//		    <format name="pattern">%L %M</property>
 //		  </filter>
 //		</logging>
-// The <tag> is ignored. 
+// The <tag> is ignored.
 //
 // To configure the pattern formatter all filters accept:
 //		<format name="pattern">[%D %T] %L %M</format>
@@ -51,20 +51,20 @@
 // the property syntax will only ever support the pattern formatter
 //
 // Code Architecture:
-// A MultiLogger <logging> which consists of many ConfigLoggers <filter>. ConfigLoggers have three properties: 
+// A MultiLogger <logging> which consists of many ConfigLoggers <filter>. ConfigLoggers have three properties:
 // LogWriter <type>, Level (as a threshold) <level> and LogFormatter <format>.
-// 
+//
 // In practice, this means that you define ConfigLoggers with a LogWriter (where the log prints to
 // eg. socket, file, stdio etc), the Level threshold, and a LogFormatter which formats the message
 // before writing.  Because the LogFormatters and LogWriters are simple interfaces, it is easy to
 // write your own custom implementations.
-// 
+//
 // Once configured, you only deal with the "Logger" interface and use the log methods in your code
-// 
+//
 // The motivation for this package grew from a need to make some changes to the functionality of
 // log4go (which had already been integrated into a larger project).  I tried to maintain compatiblity
 // with log4go for the interface and configuration.  The main issue I had with log4go was that each of
-// logger types had incisistent and incompatible configuration.  I looked at contributing changes to 
+// logger types had incisistent and incompatible configuration.  I looked at contributing changes to
 // log4go, but I would have needed to break existing use cases so I decided to do a rewrite from scratch.
 //
 package timber
@@ -92,11 +92,34 @@ const (
 	CRITICAL
 )
 
-// Default level passed to runtime.Caller by Timber, add to this if you wrap Timber in your own logging code  
+// Default level passed to runtime.Caller by Timber, add to this if you wrap Timber in your own logging code
 const DefaultFileDepth int = 3
 
 // What gets printed for each Log level
 var LevelStrings = [...]string{"", "FNST", "FINE", "DEBG", "TRAC", "INFO", "WARN", "EROR", "CRIT"}
+
+// Full level names
+var LongLevelStrings = []string{
+	"NONE",
+	"FINEST",
+	"FINE",
+	"DEBUG",
+	"TRACE",
+	"INFO",
+	"WARNING",
+	"ERROR",
+	"CRITICAL",
+}
+
+// Return a given level string as the actual Level value
+func getLevel(lvlString string) Level {
+	for idx, str := range LongLevelStrings {
+		if str == lvlString {
+			return Level(idx)
+		}
+	}
+	return Level(0)
+}
 
 // This explicitly defines the contract for a logger
 // Not really useful except for documentation for
@@ -196,7 +219,7 @@ type Timber struct {
 	writerConfigChan chan timberConfig
 	recordChan       chan LogRecord
 	hasLogger        bool
-	// This value is passed to runtime.Caller to get the file name/line and may require 
+	// This value is passed to runtime.Caller to get the file name/line and may require
 	// tweaking if you want to wrap the logger
 	FileDepth int
 }
@@ -275,7 +298,7 @@ func closeAllWriters(cls []ConfigLogger) {
 	}
 }
 
-// MultiLogger interface 
+// MultiLogger interface
 func (t *Timber) AddLogger(logger ConfigLogger) int {
 	tcChan := make(chan int, 1) // buffered
 	tc := timberConfig{Action: actionAdd, Cfg: logger, Ret: tcChan}
@@ -342,7 +365,7 @@ func (t *Timber) Log(lvl Level, arg0 interface{}, args ...interface{}) {
 	t.prepareAndSend(lvl, fmt.Sprintf(arg0.(string), args...), t.FileDepth)
 }
 
-// Print won't work well with a pattern_logger because it explicitly adds 
+// Print won't work well with a pattern_logger because it explicitly adds
 // its own \n; so you'd have to write your own formatter to remove it
 func (t *Timber) Print(v ...interface{}) {
 	t.prepareAndSend(NONE, fmt.Sprint(v...), t.FileDepth)
@@ -351,7 +374,7 @@ func (t *Timber) Printf(format string, v ...interface{}) {
 	t.prepareAndSend(NONE, fmt.Sprintf(format, v...), t.FileDepth)
 }
 
-// Println won't work well either with a pattern_logger because it explicitly adds 
+// Println won't work well either with a pattern_logger because it explicitly adds
 // its own \n; so you'd have to write your own formatter to not have 2 \n's
 func (t *Timber) Println(v ...interface{}) {
 	t.prepareAndSend(NONE, fmt.Sprintln(v...), t.FileDepth)
@@ -422,6 +445,6 @@ func Fatalln(v ...interface{})                             { Global.Fatalln(v...
 func AddLogger(logger ConfigLogger) int { return Global.AddLogger(logger) }
 func Close()                            { Global.Close() }
 
-// Match log4go to load configuration.  This could probably also be made extensible
-// but it's not worth it right now
-func LoadConfiguration(filename string) { Global.LoadXMLConfig(filename) }
+func LoadConfiguration(filename string)     { Global.LoadConfig(filename) }
+func LoadXMLConfiguration(filename string)  { Global.LoadXMLConfig(filename) }
+func LoadJSONConfiguration(filename string) { Global.LoadJSONConfig(filename) }
