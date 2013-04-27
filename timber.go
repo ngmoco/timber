@@ -53,7 +53,8 @@
 // 		%x - Extra Short Source: just file without .go suffix
 // 		%M - Message
 // 		%% - Percent sign
-// 		%F - Caller Path: package path + calling function name
+// 		%P - Caller Path: package path + calling function name
+// 		%p - Caller Path: package path
 // the string number prefixes are allowed e.g.: %10s will pad the source field to 10 spaces
 // pattern defaults to %M
 // Both log4go synatax of <property name="format"> and new <format name=type> are supported

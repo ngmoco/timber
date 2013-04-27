@@ -8,14 +8,16 @@
       "_level_comment": [
         "Levels are FINEST|FINE|DEBUG|TRACE|INFO|WARNING|ERROR"
       ],
-      "granular": {
-        "level": "FINEST",
-        "path": "path/to/package",
-      },
-      "granular": {
-        "level": "FINEST",
-        "path": "path/to/package.FunctionName",
-      },
+      "granulars": [
+				{
+					"level": "FINEST",
+					"path": "path/to/package"
+				},
+				{
+					"level": "FINEST",
+					"path": "path/to/package.FunctionName"
+				}
+			],
       "format": {
         "name": "pattern",
         "value": "[%D %T] %L %M"

@@ -8,9 +8,16 @@ import (
 	"reflect"
 )
 
+// Granulars are overriding levels that can be either
+// package paths or package path + function name
+type JSONGranular struct {
+	Level string `xml:"level"`
+	Path  string `xml:"path"`
+}
+
 type JSONProperty struct {
-	Name  string
-	Value string
+	Name  string `xml:"name"`
+	Value string `xml:"value"`
 }
 
 type JSONFilter struct {
@@ -20,6 +27,7 @@ type JSONFilter struct {
 	Level      string
 	Format     JSONProperty
 	Properties []JSONProperty
+	Granulars  []JSONGranular
 }
 
 type JSONConfig struct {
@@ -51,10 +59,9 @@ func (t *Timber) LoadJSONConfig(filename string) {
 		level := getLevel(filter.Level)
 		formatter := getJSONFormatter(filter)
 		granulars := make(map[string]Level)
-		// TODO
-		//for _, granular := range filter.Granulars {
-		//  granulars[granular.Path] = getLevel(granular.Level)
-		//}
+		for _, granular := range filter.Granulars {
+			granulars[granular.Path] = getLevel(granular.Level)
+		}
 		configLogger := ConfigLogger{Level: level, Formatter: formatter, Granulars: granulars}
 
 		switch filter.Type {
