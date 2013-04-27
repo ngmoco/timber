@@ -53,8 +53,8 @@
 // 		%x - Extra Short Source: just file without .go suffix
 // 		%M - Message
 // 		%% - Percent sign
-// 		%P - Caller Path: package path + calling function name
-// 		%p - Caller Path: package path
+// 		%P - Caller Path: packagePath.CallingFunctionName
+// 		%p - Caller Path: packagePath
 // the string number prefixes are allowed e.g.: %10s will pad the source field to 10 spaces
 // pattern defaults to %M
 // Both log4go synatax of <property name="format"> and new <format name=type> are supported
@@ -62,7 +62,7 @@
 // To configure granulars:
 //   - Create one or many <granular> within a filter
 //   - Define a <level> and <path> within, where path can be path to package or path to
-//     package + function name. Function name definitions override package paths.
+//     package.FunctionName. Function name definitions override package paths.
 //
 // Code Architecture:
 // A MultiLogger <logging> which consists of many ConfigLoggers <filter>. ConfigLoggers have three properties:
@@ -317,7 +317,7 @@ func sendToLoggers(loggers []ConfigLogger, rec LogRecord) {
 			sendToLogger(rec, gLevel, formatted, cLog)
 			continue
 		}
-		// Find any packege level definitions.
+		// Find any package level definitions.
 		gLevel, ok = cLog.Granulars[rec.PackagePath]
 		if ok {
 			sendToLogger(rec, gLevel, formatted, cLog)
