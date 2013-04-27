@@ -27,6 +27,7 @@ type PatFormatter struct {
 //   %x - Extra Short Source: just file without .go suffix
 //   %M - Message
 //   %% - Percent sign
+// 	 %F - Caller Path: package path + calling function name
 // the string number prefixes are allowed e.g.: %10s will pad the source field to 10 spaces
 func NewPatFormatter(format string) *PatFormatter {
 	pf := new(PatFormatter)
@@ -146,6 +147,14 @@ func (pf *PatFormatter) compileForLevel(level int) []byte {
 		case '%':
 			sprintfFmt = append(sprintfFmt, '%')
 			sprintfFmt = append(sprintfFmt, fmt_str...)
+		case 'F':
+			sprintfFmt = append(sprintfFmt, '%')
+			if num != nil {
+				sprintfFmt = append(sprintfFmt, num...)
+			}
+			sprintfFmt = append(sprintfFmt, 's')
+			sprintfFmt = append(sprintfFmt, fmt_str[1:]...)
+			pf.formatDynamic = append(pf.formatDynamic, 'F')
 		default:
 			sprintfFmt = append(sprintfFmt, fmt_str...)
 		} // end switch
@@ -186,6 +195,8 @@ func (pf *PatFormatter) getDynamic(rec LogRecord) []interface{} {
 			ret = append(ret, parseSourceXShort(rec.SourceFile))
 		case 'M':
 			ret = append(ret, rec.Message)
+		case 'F':
+			ret = append(ret, rec.FuncPath)
 		}
 	}
 	return ret
@@ -199,6 +210,7 @@ func parseSourceShort(file string, line int) string {
 	just_file := file[strings.LastIndex(file, "/")+1:]
 	return fmt.Sprintf("%s:%d", just_file, line)
 }
+
 func parseSourceXShort(file string) string {
 	return file[strings.LastIndex(file, "/")+1 : (len(file) - 3)]
 }

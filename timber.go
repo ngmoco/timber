@@ -45,6 +45,7 @@
 // 		%x - Extra Short Source: just file without .go suffix
 // 		%M - Message
 // 		%% - Percent sign
+// 		%F - Caller Path: package path + calling function name
 // the string number prefixes are allowed e.g.: %10s will pad the source field to 10 spaces
 // pattern defaults to %M
 // Both log4go synatax of <property name="format"> and new <format name=type> are supported
@@ -174,6 +175,7 @@ type LogRecord struct {
 	SourceFile string
 	SourceLine int
 	Message    string
+	FuncPath   string
 }
 
 // Format a log message before writing
@@ -327,8 +329,13 @@ func (t *Timber) SetFormatter(index int, formatter LogFormatter) {
 // Logger interface
 func (t *Timber) prepareAndSend(lvl Level, msg string, depth int) {
 	now := time.Now().UnixNano()
-	_, file, line, _ := runtime.Caller(depth)
-	t.recordChan <- LogRecord{Level: lvl, Timestamp: now, SourceFile: file, SourceLine: line, Message: msg}
+	pc, file, line, _ := runtime.Caller(depth)
+	funcPath := "_"
+	me := runtime.FuncForPC(pc)
+	if me != nil {
+		funcPath = me.Name()
+	}
+	t.recordChan <- LogRecord{Level: lvl, Timestamp: now, SourceFile: file, SourceLine: line, Message: msg, FuncPath: funcPath}
 }
 
 func (t *Timber) Finest(arg0 interface{}, args ...interface{}) {
