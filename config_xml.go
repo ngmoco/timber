@@ -10,7 +10,7 @@ import (
 
 // Granulars are overriding levels that can be either
 // package paths or package path + function name
-type Granular struct {
+type XMLGranular struct {
 	Level string `xml:"level"`
 	Path  string `xml:"path"`
 }
@@ -28,7 +28,7 @@ type XMLFilter struct {
 	Level      string        `xml:"level"`
 	Format     XMLProperty   `xml:"format"`
 	Properties []XMLProperty `xml:"property"`
-	Granulars  []Granular    `xml:"granular"`
+	Granulars  []XMLGranular    `xml:"granular"`
 }
 
 type XMLConfig struct {
