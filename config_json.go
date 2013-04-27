@@ -50,7 +50,12 @@ func (t *Timber) LoadJSONConfig(filename string) {
 		}
 		level := getLevel(filter.Level)
 		formatter := getJSONFormatter(filter)
-		configLogger := ConfigLogger{Level: level, Formatter: formatter}
+		granulars := make(map[string]Level)
+		// TODO
+		//for _, granular := range filter.Granulars {
+		//  granulars[granular.Path] = getLevel(granular.Level)
+		//}
+		configLogger := ConfigLogger{Level: level, Formatter: formatter, Granulars: granulars}
 
 		switch filter.Type {
 		case "console":
