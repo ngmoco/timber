@@ -34,6 +34,8 @@
         "%x - Extra Short Source: just file without .go suffix                                    ", 
         "%M - Message                                                                             ", 
         "%% - Percent sign                                                                        ", 
+        "%P - package + function name                                                             ", 
+        "%p - package                                                                             ", 
         "the string number prefixes are allowed e.g.: %10s will pad the source field to 10 spaces ", 
         "pattern defaults to %M                                                                   ", 
         "Setting formats can be either through filter.format or through a filter.properties item, ", 
