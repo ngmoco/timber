@@ -16,6 +16,12 @@ type PatFormatter struct {
 	formatDynamic []byte
 }
 
+// Split a full package.function into just the package component.
+func splitPackage(pkg string) string {
+	split := strings.Split(pkg, ".")
+	return strings.Join(split[:len(split)-1], "")
+}
+
 // Format codes:
 //   %T - Time: 17:24:05.333 HH:MM:SS.ms
 //   %t - Time: 17:24:05 HH:MM:SS
@@ -27,7 +33,8 @@ type PatFormatter struct {
 //   %x - Extra Short Source: just file without .go suffix
 //   %M - Message
 //   %% - Percent sign
-// 	 %F - Caller Path: package path + calling function name
+// 	 %P - Caller Path: package path + calling function name
+// 	 %p - Caller Path: package path
 // the string number prefixes are allowed e.g.: %10s will pad the source field to 10 spaces
 func NewPatFormatter(format string) *PatFormatter {
 	pf := new(PatFormatter)
@@ -147,14 +154,22 @@ func (pf *PatFormatter) compileForLevel(level int) []byte {
 		case '%':
 			sprintfFmt = append(sprintfFmt, '%')
 			sprintfFmt = append(sprintfFmt, fmt_str...)
-		case 'F':
+		case 'P':
 			sprintfFmt = append(sprintfFmt, '%')
 			if num != nil {
 				sprintfFmt = append(sprintfFmt, num...)
 			}
 			sprintfFmt = append(sprintfFmt, 's')
 			sprintfFmt = append(sprintfFmt, fmt_str[1:]...)
-			pf.formatDynamic = append(pf.formatDynamic, 'F')
+			pf.formatDynamic = append(pf.formatDynamic, 'P')
+		case 'p':
+			sprintfFmt = append(sprintfFmt, '%')
+			if num != nil {
+				sprintfFmt = append(sprintfFmt, num...)
+			}
+			sprintfFmt = append(sprintfFmt, 's')
+			sprintfFmt = append(sprintfFmt, fmt_str[1:]...)
+			pf.formatDynamic = append(pf.formatDynamic, 'p')
 		default:
 			sprintfFmt = append(sprintfFmt, fmt_str...)
 		} // end switch
@@ -195,8 +210,10 @@ func (pf *PatFormatter) getDynamic(rec LogRecord) []interface{} {
 			ret = append(ret, parseSourceXShort(rec.SourceFile))
 		case 'M':
 			ret = append(ret, rec.Message)
-		case 'F':
+		case 'P':
 			ret = append(ret, rec.FuncPath)
+		case 'p':
+			ret = append(ret, rec.PackagePath)
 		}
 	}
 	return ret

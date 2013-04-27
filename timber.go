@@ -170,12 +170,13 @@ type LogWriter interface {
 // This packs up all the message data and metadata. This structure
 // will be passed to the LogFormatter
 type LogRecord struct {
-	Level      Level
-	Timestamp  int64
-	SourceFile string
-	SourceLine int
-	Message    string
-	FuncPath   string
+	Level       Level
+	Timestamp   int64
+	SourceFile  string
+	SourceLine  int
+	Message     string
+	FuncPath    string
+	PackagePath string
 }
 
 // Format a log message before writing
@@ -331,11 +332,21 @@ func (t *Timber) prepareAndSend(lvl Level, msg string, depth int) {
 	now := time.Now().UnixNano()
 	pc, file, line, _ := runtime.Caller(depth)
 	funcPath := "_"
+	packagePath := "_"
 	me := runtime.FuncForPC(pc)
 	if me != nil {
 		funcPath = me.Name()
+		packagePath = splitPackage(funcPath)
 	}
-	t.recordChan <- LogRecord{Level: lvl, Timestamp: now, SourceFile: file, SourceLine: line, Message: msg, FuncPath: funcPath}
+	t.recordChan <- LogRecord{
+		Level:       lvl,
+		Timestamp:   now,
+		SourceFile:  file,
+		SourceLine:  line,
+		Message:     msg,
+		FuncPath:    funcPath,
+		PackagePath: packagePath,
+	}
 }
 
 func (t *Timber) Finest(arg0 interface{}, args ...interface{}) {
