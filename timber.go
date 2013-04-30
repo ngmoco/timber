@@ -18,6 +18,14 @@
 //			<tag>file</tag>
 //			<type>file</type>
 //			<level>FINEST</level>
+//			<granular>
+//			  <level>INFO</level>
+//			  <path>path/to/package.FunctionName</path>
+//      </granular>
+//			<granular>
+//			  <level>WARNING</level>
+//			  <path>path/to/package</path>
+//      </granular>
 //			<property name="filename">log/server.log</property>
 //			<property name="format">server [%D %T] [%L] %M</property>
 //		  </filter>
@@ -45,10 +53,16 @@
 // 		%x - Extra Short Source: just file without .go suffix
 // 		%M - Message
 // 		%% - Percent sign
+// 		%P - Caller Path: packagePath.CallingFunctionName
+// 		%p - Caller Path: packagePath
 // the string number prefixes are allowed e.g.: %10s will pad the source field to 10 spaces
 // pattern defaults to %M
 // Both log4go synatax of <property name="format"> and new <format name=type> are supported
 // the property syntax will only ever support the pattern formatter
+// To configure granulars:
+//   - Create one or many <granular> within a filter
+//   - Define a <level> and <path> within, where path can be path to package or path to
+//     package.FunctionName. Function name definitions override package paths.
 //
 // Code Architecture:
 // A MultiLogger <logging> which consists of many ConfigLoggers <filter>. ConfigLoggers have three properties:
@@ -169,11 +183,13 @@ type LogWriter interface {
 // This packs up all the message data and metadata. This structure
 // will be passed to the LogFormatter
 type LogRecord struct {
-	Level      Level
-	Timestamp  int64
-	SourceFile string
-	SourceLine int
-	Message    string
+	Level       Level
+	Timestamp   int64
+	SourceFile  string
+	SourceLine  int
+	Message     string
+	FuncPath    string
+	PackagePath string
 }
 
 // Format a log message before writing
@@ -187,6 +203,7 @@ type ConfigLogger struct {
 	// Messages with level < Level will be ignored.  It's up to the implementor to keep the contract or not
 	Level     Level
 	Formatter LogFormatter
+	Granulars map[string]Level
 }
 
 // Allow logging to multiple places
@@ -280,15 +297,34 @@ func (t *Timber) asyncLumberJack() {
 	closeAllWriters(loggers)
 }
 
+func sendToLogger(rec LogRecord, granLevel Level, formatted string, cLog ConfigLogger) bool {
+	if rec.Level >= granLevel || granLevel == 0 {
+		if formatted == "" {
+			formatted = cLog.Formatter.Format(rec)
+		}
+		cLog.LogWriter.LogWrite(formatted)
+		return true
+	}
+	return false
+}
+
 func sendToLoggers(loggers []ConfigLogger, rec LogRecord) {
 	formatted := ""
 	for _, cLog := range loggers {
-		if rec.Level >= cLog.Level || rec.Level == 0 {
-			if formatted == "" {
-				formatted = cLog.Formatter.Format(rec)
-			}
-			cLog.LogWriter.LogWrite(formatted)
+		// Find any function level definitions.
+		gLevel, ok := cLog.Granulars[rec.FuncPath]
+		if ok {
+			sendToLogger(rec, gLevel, formatted, cLog)
+			continue
 		}
+		// Find any package level definitions.
+		gLevel, ok = cLog.Granulars[rec.PackagePath]
+		if ok {
+			sendToLogger(rec, gLevel, formatted, cLog)
+			continue
+		}
+		// Use default definition
+		sendToLogger(rec, cLog.Level, formatted, cLog)
 	}
 }
 
@@ -327,8 +363,23 @@ func (t *Timber) SetFormatter(index int, formatter LogFormatter) {
 // Logger interface
 func (t *Timber) prepareAndSend(lvl Level, msg string, depth int) {
 	now := time.Now().UnixNano()
-	_, file, line, _ := runtime.Caller(depth)
-	t.recordChan <- LogRecord{Level: lvl, Timestamp: now, SourceFile: file, SourceLine: line, Message: msg}
+	pc, file, line, _ := runtime.Caller(depth)
+	funcPath := "_"
+	packagePath := "_"
+	me := runtime.FuncForPC(pc)
+	if me != nil {
+		funcPath = me.Name()
+		packagePath = splitPackage(funcPath)
+	}
+	t.recordChan <- LogRecord{
+		Level:       lvl,
+		Timestamp:   now,
+		SourceFile:  file,
+		SourceLine:  line,
+		Message:     msg,
+		FuncPath:    funcPath,
+		PackagePath: packagePath,
+	}
 }
 
 func (t *Timber) Finest(arg0 interface{}, args ...interface{}) {

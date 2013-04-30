@@ -2,6 +2,14 @@
   <filter enabled="true">
     <tag>stderr</tag>
     <type>console</type>
+		<granular>
+			<level>DEBUG</level>
+			<path>path/to/package</path>
+		</granular>
+		<granular>
+			<level>FINEST</level>
+			<path>path/to/package.FunctionName</path>
+		</granular>
     <!-- Levels are FINEST|FINE|DEBUG|TRACE|INFO|WARNING|ERROR -->
     <level>DEBUG</level>
     <!--

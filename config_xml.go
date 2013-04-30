@@ -8,6 +8,13 @@ import (
 	"reflect"
 )
 
+// Granulars are overriding levels that can be either
+// package paths or package path + function name
+type XMLGranular struct {
+	Level string `xml:"level"`
+	Path  string `xml:"path"`
+}
+
 // match the log4go structure so i don't have to change my configs
 type XMLProperty struct {
 	Name  string `xml:"name,attr"`
@@ -21,6 +28,7 @@ type XMLFilter struct {
 	Level      string        `xml:"level"`
 	Format     XMLProperty   `xml:"format"`
 	Properties []XMLProperty `xml:"property"`
+	Granulars  []XMLGranular    `xml:"granular"`
 }
 
 type XMLConfig struct {
@@ -52,7 +60,11 @@ func (t *Timber) LoadXMLConfig(filename string) {
 		}
 		level := getLevel(filter.Level)
 		formatter := getXMLFormatter(filter)
-		configLogger := ConfigLogger{Level: level, Formatter: formatter}
+		granulars := make(map[string]Level)
+		for _, granular := range filter.Granulars {
+			granulars[granular.Path] = getLevel(granular.Level)
+		}
+		configLogger := ConfigLogger{Level: level, Formatter: formatter, Granulars: granulars}
 
 		switch filter.Type {
 		case "console":
