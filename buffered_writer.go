@@ -10,8 +10,8 @@ import (
 type BufferedWriter struct {
 	buf    *bufio.Writer
 	writer io.WriteCloser
-	mc chan string
-	fc chan int
+	mc     chan string
+	fc     chan int
 }
 
 func NewBufferedWriter(writer io.WriteCloser) *BufferedWriter {
@@ -27,7 +27,7 @@ func NewBufferedWriter(writer io.WriteCloser) *BufferedWriter {
 func (bw *BufferedWriter) writeLoop() {
 	for {
 		select {
-		case msg, ok := <- bw.mc:
+		case msg, ok := <-bw.mc:
 			if !ok {
 				bw.buf.Flush()
 				bw.writer.Close()
@@ -38,7 +38,7 @@ func (bw *BufferedWriter) writeLoop() {
 				// uh-oh... what do i do if logging fails; punt!
 				log.Printf("TIMBER! epic fail: %v", err)
 			}
-		case <- bw.fc:
+		case <-bw.fc:
 			bw.buf.Flush()
 		}
 	}

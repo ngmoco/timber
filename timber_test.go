@@ -36,6 +36,13 @@ func TestXmlConfig(t *testing.T) {
 	log.Close()
 }
 
+func TestJsonConfig(t *testing.T) {
+	log := NewTimber()
+	log.LoadJSONConfig("timber.json")
+	log.Info("Message to JSON loggers")
+	log.Close()
+}
+
 func TestDefaultLogger(t *testing.T) {
 	console := new(ConsoleWriter)
 	formatter := NewPatFormatter("%DT%T %L %-10x %M")
