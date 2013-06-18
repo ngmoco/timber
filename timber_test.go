@@ -52,3 +52,15 @@ func TestDefaultLogger(t *testing.T) {
 	Warn("Some sweet default logging")
 	Close()
 }
+
+func TestDoubleClose(t *testing.T) {
+	log := NewTimber()
+	console := new(ConsoleWriter)
+	formatter := NewPatFormatter("%DT%T %L %-10x %M")
+	log.AddLogger(ConfigLogger{LogWriter: console,
+		Level:     DEBUG,
+		Formatter: formatter})
+	log.Close()
+	log.Close() // call Close twice	
+	log.Warn("Don't panic")
+}
