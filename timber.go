@@ -1,4 +1,4 @@
-// This is a brand new logger implementation that matches the log4go interface and also may be
+// This is a logger implementation that matches the log4go interface and also may be
 // used as a drop-in replacement for the standard logger
 //
 // Basic use:
@@ -88,6 +88,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sync"
 	"time"
 )
 
@@ -238,7 +239,9 @@ type Timber struct {
 	hasLogger        bool
 	// This value is passed to runtime.Caller to get the file name/line and may require
 	// tweaking if you want to wrap the logger
-	FileDepth int
+	closeLatch *sync.Once
+	blackHole  chan int
+	FileDepth  int
 }
 
 type timberAction int
@@ -264,6 +267,8 @@ func NewTimber() *Timber {
 	t.writerConfigChan = make(chan timberConfig)
 	t.recordChan = make(chan LogRecord, 300)
 	t.FileDepth = DefaultFileDepth
+	t.closeLatch = &sync.Once{}
+	t.blackHole = make(chan int)
 	go t.asyncLumberJack()
 	return t
 }
@@ -282,6 +287,7 @@ func (t *Timber) asyncLumberJack() {
 				cfg.Ret <- (len(loggers) - 1)
 			case actionModify:
 			case actionQuit:
+				close(t.blackHole)
 				close(t.recordChan)
 				loopIt = false
 				defer func() {
@@ -344,10 +350,12 @@ func (t *Timber) AddLogger(logger ConfigLogger) int {
 
 // MultiLogger interface
 func (t *Timber) Close() {
-	tcChan := make(chan int)
-	tc := timberConfig{Action: actionQuit, Ret: tcChan}
-	t.writerConfigChan <- tc
-	<-tcChan // block for closing
+	t.closeLatch.Do(func() {
+		tcChan := make(chan int)
+		tc := timberConfig{Action: actionQuit, Ret: tcChan}
+		t.writerConfigChan <- tc
+		<-tcChan // block for cloosing
+	})
 }
 
 // Not yet implemented
@@ -371,14 +379,21 @@ func (t *Timber) prepareAndSend(lvl Level, msg string, depth int) {
 		funcPath = me.Name()
 		packagePath = splitPackage(funcPath)
 	}
-	t.recordChan <- LogRecord{
-		Level:       lvl,
-		Timestamp:   now,
-		SourceFile:  file,
-		SourceLine:  line,
-		Message:     msg,
-		FuncPath:    funcPath,
-		PackagePath: packagePath,
+	select {
+	case <-t.blackHole:
+		// the blackHole always blocks until we close
+		// then it always succeeds so we avoid writing
+		// to the closed channel
+	default:
+		t.recordChan <- LogRecord{
+			Level:       lvl,
+			Timestamp:   now,
+			SourceFile:  file,
+			SourceLine:  line,
+			Message:     msg,
+			FuncPath:    funcPath,
+			PackagePath: packagePath,
+		}
 	}
 }
 
