@@ -195,7 +195,7 @@ type LogRecord struct {
 
 // Format a log message before writing
 type LogFormatter interface {
-	Format(rec LogRecord) string
+	Format(rec *LogRecord) string
 }
 
 // Container a single log format/destination
@@ -235,13 +235,13 @@ type MultiLogger interface {
 // I also don't support the passing of the closure stuff
 type Timber struct {
 	writerConfigChan chan timberConfig
-	recordChan       chan LogRecord
+	recordChan       chan *LogRecord
 	hasLogger        bool
+	closeLatch       *sync.Once
+	blackHole        chan int
 	// This value is passed to runtime.Caller to get the file name/line and may require
 	// tweaking if you want to wrap the logger
-	closeLatch *sync.Once
-	blackHole  chan int
-	FileDepth  int
+	FileDepth int
 }
 
 type timberAction int
@@ -265,7 +265,7 @@ type timberConfig struct {
 func NewTimber() *Timber {
 	t := new(Timber)
 	t.writerConfigChan = make(chan timberConfig)
-	t.recordChan = make(chan LogRecord, 300)
+	t.recordChan = make(chan *LogRecord, 300)
 	t.FileDepth = DefaultFileDepth
 	t.closeLatch = &sync.Once{}
 	t.blackHole = make(chan int)
@@ -303,7 +303,7 @@ func (t *Timber) asyncLumberJack() {
 	closeAllWriters(loggers)
 }
 
-func sendToLogger(rec LogRecord, granLevel Level, formatted string, cLog ConfigLogger) bool {
+func sendToLogger(rec *LogRecord, granLevel Level, formatted string, cLog ConfigLogger) bool {
 	if rec.Level >= granLevel || granLevel == 0 {
 		if formatted == "" {
 			formatted = cLog.Formatter.Format(rec)
@@ -314,7 +314,7 @@ func sendToLogger(rec LogRecord, granLevel Level, formatted string, cLog ConfigL
 	return false
 }
 
-func sendToLoggers(loggers []ConfigLogger, rec LogRecord) {
+func sendToLoggers(loggers []ConfigLogger, rec *LogRecord) {
 	formatted := ""
 	for _, cLog := range loggers {
 		// Find any function level definitions.
@@ -370,6 +370,17 @@ func (t *Timber) SetFormatter(index int, formatter LogFormatter) {
 
 // Logger interface
 func (t *Timber) prepareAndSend(lvl Level, msg string, depth int) {
+	select {
+	case <-t.blackHole:
+		// the blackHole always blocks until we close
+		// then it always succeeds so we avoid writing
+		// to the closed channel
+	default:
+		t.recordChan <- t.prepare(lvl, msg, depth+1)
+	}
+}
+
+func (t *Timber) prepare(lvl Level, msg string, depth int) *LogRecord {
 	now := time.Now().UnixNano()
 	pc, file, line, _ := runtime.Caller(depth)
 	funcPath := "_"
@@ -379,21 +390,15 @@ func (t *Timber) prepareAndSend(lvl Level, msg string, depth int) {
 		funcPath = me.Name()
 		packagePath = splitPackage(funcPath)
 	}
-	select {
-	case <-t.blackHole:
-		// the blackHole always blocks until we close
-		// then it always succeeds so we avoid writing
-		// to the closed channel
-	default:
-		t.recordChan <- LogRecord{
-			Level:       lvl,
-			Timestamp:   now,
-			SourceFile:  file,
-			SourceLine:  line,
-			Message:     msg,
-			FuncPath:    funcPath,
-			PackagePath: packagePath,
-		}
+
+	return &LogRecord{
+		Level:       lvl,
+		Timestamp:   now,
+		SourceFile:  file,
+		SourceLine:  line,
+		Message:     msg,
+		FuncPath:    funcPath,
+		PackagePath: packagePath,
 	}
 }
 

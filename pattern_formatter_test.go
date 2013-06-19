@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var lr = LogRecord{
+var lr = &LogRecord{
 	Level:       INFO,
 	Timestamp:   1319150347383485000,
 	SourceFile:  "/blah/der/some_file.go",
