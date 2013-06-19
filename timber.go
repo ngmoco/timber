@@ -84,6 +84,7 @@
 package timber
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -400,6 +401,14 @@ func (t *Timber) prepare(lvl Level, msg string, depth int) *LogRecord {
 		FuncPath:    funcPath,
 		PackagePath: packagePath,
 	}
+}
+
+// This function allows a Timber instance to be used in the standard library
+// log.SetOutput().  It is not a general Writer interface and assumes one 
+// message per call to Write. All messages are send at level INFO
+func (t *Timber)Write(p []byte) (n int, err error) {
+	t.prepareAndSend(INFO, string(bytes.TrimSpace(p)), 4) 
+	return len(p), nil
 }
 
 func (t *Timber) Finest(arg0 interface{}, args ...interface{}) {
