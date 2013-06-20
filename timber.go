@@ -1,11 +1,35 @@
-// This is a logger implementation that matches the log4go interface and also may be
-// used as a drop-in replacement for the standard logger
+// This is a logger implementation that supports multiple log levels,
+// multiple output destinations with configurable formats and levels 
+// for each.  It also supports granular output configuration to get 
+// more detailed logging for specific files/packages. Timber includes
+// support for standard XML or JSON config files to get you started
+// quickly.  It's also easy to configure in code if you want to DIY.  
 //
 // Basic use:
-//   import log "timber"
-//   log.LoadConfiguration("timber.xml")
-//   log.Debug("Debug message!")
+//   import "timber"
+//   timber.LoadConfiguration("timber.xml")
+//   timber.Debug("Debug message!")
 //
+// IMPORTANT: timber has not default destination configured so log messages
+// will be dropped until a destination is configured
+//
+// It can be used as a drop-in replacement for the standard logger
+// by changing the log import statement from:
+//   import "log"
+// to
+//   import log "timber"
+//
+// It can also be used as the output of the standard logger with
+//   log.SetFlags(0)
+//   log.SetOutput(timber.Global)
+//
+// Configuration in code is also simple:
+//		timber.AddLogger(timber.ConfigLogger{
+//			LogWriter: new(timber.ConsoleWriter),
+//			Level:     timber.DEBUG,
+//			Formatter: timber.NewPatFormatter("[%D %T] [%L] %S %M"),
+//		})
+// 
 // XML Config file:
 //		<logging>
 //		  <filter enabled="true">
@@ -21,11 +45,11 @@
 //			<granular>
 //			  <level>INFO</level>
 //			  <path>path/to/package.FunctionName</path>
-//      </granular>
+//			</granular>
 //			<granular>
 //			  <level>WARNING</level>
 //			  <path>path/to/package</path>
-//      </granular>
+//			</granular>
 //			<property name="filename">log/server.log</property>
 //			<property name="format">server [%D %T] [%L] %M</property>
 //		  </filter>
@@ -186,7 +210,7 @@ type LogWriter interface {
 // will be passed to the LogFormatter
 type LogRecord struct {
 	Level       Level
-	Timestamp   int64
+	Timestamp   time.Time
 	SourceFile  string
 	SourceLine  int
 	Message     string
@@ -382,7 +406,7 @@ func (t *Timber) prepareAndSend(lvl Level, msg string, depth int) {
 }
 
 func (t *Timber) prepare(lvl Level, msg string, depth int) *LogRecord {
-	now := time.Now().UnixNano()
+	now := time.Now()
 	pc, file, line, _ := runtime.Caller(depth)
 	funcPath := "_"
 	packagePath := "_"

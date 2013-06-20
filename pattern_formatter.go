@@ -188,7 +188,7 @@ func (pf *PatFormatter) Format(rec *LogRecord) string {
 }
 
 func (pf *PatFormatter) getDynamic(rec *LogRecord) []interface{} {
-	tm := time.Unix(0, rec.Timestamp)
+	tm := rec.Timestamp
 	ret := make([]interface{}, 0, 10)
 	for _, dyn := range pf.formatDynamic {
 		switch dyn {
