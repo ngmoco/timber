@@ -3,11 +3,12 @@ package timber
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
-var lr = LogRecord{
+var lr = &LogRecord{
 	Level:       INFO,
-	Timestamp:   1319150347383485000,
+	Timestamp:   time.Unix(0, 1319150347383485000),
 	SourceFile:  "/blah/der/some_file.go",
 	SourceLine:  7,
 	Message:     "hellooooo nurse!",
