@@ -1,7 +1,7 @@
 Timber!
 =======
 
-Timber is a logger for go with a similar interface as log4go and also can be used as a drop-in replacement for the go standard logger.
+This is a logger implementation that supports multiple log levels, multiple output destinations with configurable formats and levels for each. It also supports granular output configuration to get more detailed logging for specific files/packages. Timber includes support for standard XML or JSON config files to get you started quickly. It's also easy to configure in code if you want to DIY.
 
 Features
 --------

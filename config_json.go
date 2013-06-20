@@ -35,21 +35,21 @@ type JSONConfig struct {
 }
 
 // Loads the configuration from an JSON file (as you were probably expecting)
-func (t *Timber) LoadJSONConfig(filename string) {
+func (t *Timber) LoadJSONConfig(filename string) (error) {
 	if len(filename) <= 0 {
-		return
+		return fmt.Errorf("Empty filename")
 	}
 
 	file, err := os.Open(filename)
 	if err != nil {
-		panic(fmt.Sprintf("TIMBER! Can't load json config file: %s %v", filename, err))
+		return fmt.Errorf("TIMBER! Can't load json config file: %s %v", filename, err)
 	}
 	defer file.Close()
 
 	config := JSONConfig{}
 	err = json.NewDecoder(file).Decode(&config)
 	if err != nil {
-		panic(fmt.Sprintf("TIMBER! Can't parse json config file: %s %v", filename, err))
+		return fmt.Errorf("TIMBER! Can't parse json config file: %s %v", filename, err)
 	}
 
 	for _, filter := range config.Filters {
@@ -58,6 +58,9 @@ func (t *Timber) LoadJSONConfig(filename string) {
 		}
 		level := getLevel(filter.Level)
 		formatter := getJSONFormatter(filter)
+		if err != nil {
+			return err
+		}
 		granulars := make(map[string]Level)
 		for _, granular := range filter.Granulars {
 			granulars[granular.Path] = getLevel(granular.Level)
@@ -68,9 +71,15 @@ func (t *Timber) LoadJSONConfig(filename string) {
 		case "console":
 			configLogger.LogWriter = new(ConsoleWriter)
 		case "socket":
-			configLogger.LogWriter = getJSONSocketWriter(filter)
+			configLogger.LogWriter, err = getJSONSocketWriter(filter)
+			if err != nil {
+				return err
+			}
 		case "file":
-			configLogger.LogWriter = getJSONFileWriter(filter)
+			configLogger.LogWriter, err = getJSONFileWriter(filter)
+			if err != nil {
+				return err
+			}
 		default:
 			log.Printf("TIMBER! Warning unrecognized filter in config file: %v\n", filter.Tag)
 			continue
@@ -78,6 +87,7 @@ func (t *Timber) LoadJSONConfig(filename string) {
 
 		t.AddLogger(configLogger)
 	}
+	return nil
 }
 
 func getJSONFormatter(filter JSONFilter) LogFormatter {
@@ -103,7 +113,7 @@ func getJSONFormatter(filter JSONFilter) LogFormatter {
 	return NewPatFormatter(format)
 }
 
-func getJSONSocketWriter(filter JSONFilter) LogWriter {
+func getJSONSocketWriter(filter JSONFilter) (LogWriter, error) {
 	var protocol, endpoint string
 
 	for _, property := range filter.Properties {
@@ -115,12 +125,12 @@ func getJSONSocketWriter(filter JSONFilter) LogWriter {
 	}
 
 	if protocol == "" || endpoint == "" {
-		panic("TIMBER! Missing protocol or endpoint for socket log writer")
+		return nil, fmt.Errorf("TIMBER! Missing protocol or endpoint for socket log writer")
 	}
 	return NewSocketWriter(protocol, endpoint)
 }
 
-func getJSONFileWriter(filter JSONFilter) LogWriter {
+func getJSONFileWriter(filter JSONFilter) (LogWriter, error) {
 	filename := ""
 
 	for _, property := range filter.Properties {
@@ -129,7 +139,7 @@ func getJSONFileWriter(filter JSONFilter) LogWriter {
 		}
 	}
 	if filename == "" {
-		panic("TIMBER! Missing filename for file log writer")
+		return nil, fmt.Errorf("TIMBER! Missing filename for file log writer")
 	}
 	return NewFileWriter(filename)
 }

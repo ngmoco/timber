@@ -2,8 +2,9 @@ package timber
 
 import (
 	"bufio"
+	"fmt"
 	"io"
-	"log"
+	"time"
 )
 
 // Use this of you need some buffering, or not
@@ -12,16 +13,18 @@ type BufferedWriter struct {
 	writer io.WriteCloser
 	mc     chan string
 	fc     chan int
+	autoFlush *time.Ticker
 }
 
-func NewBufferedWriter(writer io.WriteCloser) *BufferedWriter {
+func NewBufferedWriter(writer io.WriteCloser) (*BufferedWriter, error) {
 	bw := new(BufferedWriter)
 	bw.writer = writer
 	bw.buf = bufio.NewWriter(writer)
 	bw.mc = make(chan string)
 	bw.fc = make(chan int)
+	bw.autoFlush = time.NewTicker(time.Second)
 	go bw.writeLoop()
-	return bw
+	return bw, nil
 }
 
 func (bw *BufferedWriter) writeLoop() {
@@ -36,9 +39,11 @@ func (bw *BufferedWriter) writeLoop() {
 			_, err := bw.buf.Write([]byte(msg))
 			if err != nil {
 				// uh-oh... what do i do if logging fails; punt!
-				log.Printf("TIMBER! epic fail: %v", err)
+				fmt.Printf("TIMBER! epic fail: %v", err)
 			}
 		case <-bw.fc:
+			bw.buf.Flush()
+		case <-bw.autoFlush.C:
 			bw.buf.Flush()
 		}
 	}

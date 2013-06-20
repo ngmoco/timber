@@ -28,7 +28,7 @@ type XMLFilter struct {
 	Level      string        `xml:"level"`
 	Format     XMLProperty   `xml:"format"`
 	Properties []XMLProperty `xml:"property"`
-	Granulars  []XMLGranular    `xml:"granular"`
+	Granulars  []XMLGranular `xml:"granular"`
 }
 
 type XMLConfig struct {
@@ -37,21 +37,21 @@ type XMLConfig struct {
 }
 
 // Loads the configuration from an XML file (as you were probably expecting)
-func (t *Timber) LoadXMLConfig(filename string) {
+func (t *Timber) LoadXMLConfig(filename string) error {
 	if len(filename) <= 0 {
-		return
+		return fmt.Errorf("Empty filename")
 	}
 
 	file, err := os.Open(filename)
 	if err != nil {
-		panic(fmt.Sprintf("TIMBER! Can't load xml config file: %s %v", filename, err))
+		return fmt.Errorf("TIMBER! Can't load xml config file: %s %v", filename, err)
 	}
 	defer file.Close()
 
 	config := XMLConfig{}
 	err = xml.NewDecoder(file).Decode(&config)
 	if err != nil {
-		panic(fmt.Sprintf("TIMBER! Can't parse xml config file: %s %v", filename, err))
+		return fmt.Errorf("TIMBER! Can't parse xml config file: %s %v", filename, err)
 	}
 
 	for _, filter := range config.Filters {
@@ -66,13 +66,18 @@ func (t *Timber) LoadXMLConfig(filename string) {
 		}
 		configLogger := ConfigLogger{Level: level, Formatter: formatter, Granulars: granulars}
 
+		var err error
 		switch filter.Type {
 		case "console":
 			configLogger.LogWriter = new(ConsoleWriter)
 		case "socket":
-			configLogger.LogWriter = getXMLSocketWriter(filter)
+			if configLogger.LogWriter, err = getXMLSocketWriter(filter); err != nil {
+				return err
+			}
 		case "file":
-			configLogger.LogWriter = getXMLFileWriter(filter)
+			if configLogger.LogWriter, err = getXMLFileWriter(filter); err != nil {
+				return err
+			}
 		default:
 			log.Printf("TIMBER! Warning unrecognized filter in config file: %v\n", filter.Tag)
 			continue
@@ -80,6 +85,7 @@ func (t *Timber) LoadXMLConfig(filename string) {
 
 		t.AddLogger(configLogger)
 	}
+	return nil
 }
 
 func getXMLFormatter(filter XMLFilter) LogFormatter {
@@ -105,7 +111,7 @@ func getXMLFormatter(filter XMLFilter) LogFormatter {
 	return NewPatFormatter(format)
 }
 
-func getXMLSocketWriter(filter XMLFilter) LogWriter {
+func getXMLSocketWriter(filter XMLFilter) (LogWriter, error) {
 	var protocol, endpoint string
 
 	for _, property := range filter.Properties {
@@ -117,12 +123,12 @@ func getXMLSocketWriter(filter XMLFilter) LogWriter {
 	}
 
 	if protocol == "" || endpoint == "" {
-		panic("TIMBER! Missing protocol or endpoint for socket log writer")
+		return nil, fmt.Errorf("TIMBER! Missing protocol or endpoint for socket log writer")
 	}
 	return NewSocketWriter(protocol, endpoint)
 }
 
-func getXMLFileWriter(filter XMLFilter) LogWriter {
+func getXMLFileWriter(filter XMLFilter) (LogWriter, error) {
 	filename := ""
 
 	for _, property := range filter.Properties {
@@ -131,7 +137,7 @@ func getXMLFileWriter(filter XMLFilter) LogWriter {
 		}
 	}
 	if filename == "" {
-		panic("TIMBER! Missing filename for file log writer")
+		return nil, fmt.Errorf("TIMBER! Missing filename for file log writer")
 	}
 	return NewFileWriter(filename)
 }

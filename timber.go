@@ -1,11 +1,35 @@
-// This is a logger implementation that matches the log4go interface and also may be
-// used as a drop-in replacement for the standard logger
+// This is a logger implementation that supports multiple log levels,
+// multiple output destinations with configurable formats and levels 
+// for each.  It also supports granular output configuration to get 
+// more detailed logging for specific files/packages. Timber includes
+// support for standard XML or JSON config files to get you started
+// quickly.  It's also easy to configure in code if you want to DIY.  
 //
 // Basic use:
-//   import log "timber"
-//   log.LoadConfiguration("timber.xml")
-//   log.Debug("Debug message!")
+//   import "timber"
+//   timber.LoadConfiguration("timber.xml")
+//   timber.Debug("Debug message!")
 //
+// IMPORTANT: timber has not default destination configured so log messages
+// will be dropped until a destination is configured
+//
+// It can be used as a drop-in replacement for the standard logger
+// by changing the log import statement from:
+//   import "log"
+// to
+//   import log "timber"
+//
+// It can also be used as the output of the standard logger with
+//   log.SetFlags(0)
+//   log.SetOutput(timber.Global)
+//
+// Configuration in code is also simple:
+//		timber.AddLogger(timber.ConfigLogger{
+//			LogWriter: new(timber.ConsoleWriter),
+//			Level:     timber.DEBUG,
+//			Formatter: timber.NewPatFormatter("[%D %T] [%L] %S %M"),
+//		})
+// 
 // XML Config file:
 //		<logging>
 //		  <filter enabled="true">
@@ -21,11 +45,11 @@
 //			<granular>
 //			  <level>INFO</level>
 //			  <path>path/to/package.FunctionName</path>
-//      </granular>
+//			</granular>
 //			<granular>
 //			  <level>WARNING</level>
 //			  <path>path/to/package</path>
-//      </granular>
+//			</granular>
 //			<property name="filename">log/server.log</property>
 //			<property name="format">server [%D %T] [%L] %M</property>
 //		  </filter>
@@ -84,6 +108,7 @@
 package timber
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -185,7 +210,7 @@ type LogWriter interface {
 // will be passed to the LogFormatter
 type LogRecord struct {
 	Level       Level
-	Timestamp   int64
+	Timestamp   time.Time
 	SourceFile  string
 	SourceLine  int
 	Message     string
@@ -195,7 +220,7 @@ type LogRecord struct {
 
 // Format a log message before writing
 type LogFormatter interface {
-	Format(rec LogRecord) string
+	Format(rec *LogRecord) string
 }
 
 // Container a single log format/destination
@@ -235,13 +260,13 @@ type MultiLogger interface {
 // I also don't support the passing of the closure stuff
 type Timber struct {
 	writerConfigChan chan timberConfig
-	recordChan       chan LogRecord
+	recordChan       chan *LogRecord
 	hasLogger        bool
+	closeLatch       *sync.Once
+	blackHole        chan int
 	// This value is passed to runtime.Caller to get the file name/line and may require
 	// tweaking if you want to wrap the logger
-	closeLatch *sync.Once
-	blackHole  chan int
-	FileDepth  int
+	FileDepth int
 }
 
 type timberAction int
@@ -265,7 +290,7 @@ type timberConfig struct {
 func NewTimber() *Timber {
 	t := new(Timber)
 	t.writerConfigChan = make(chan timberConfig)
-	t.recordChan = make(chan LogRecord, 300)
+	t.recordChan = make(chan *LogRecord, 300)
 	t.FileDepth = DefaultFileDepth
 	t.closeLatch = &sync.Once{}
 	t.blackHole = make(chan int)
@@ -303,7 +328,7 @@ func (t *Timber) asyncLumberJack() {
 	closeAllWriters(loggers)
 }
 
-func sendToLogger(rec LogRecord, granLevel Level, formatted string, cLog ConfigLogger) bool {
+func sendToLogger(rec *LogRecord, granLevel Level, formatted string, cLog ConfigLogger) bool {
 	if rec.Level >= granLevel || granLevel == 0 {
 		if formatted == "" {
 			formatted = cLog.Formatter.Format(rec)
@@ -314,7 +339,7 @@ func sendToLogger(rec LogRecord, granLevel Level, formatted string, cLog ConfigL
 	return false
 }
 
-func sendToLoggers(loggers []ConfigLogger, rec LogRecord) {
+func sendToLoggers(loggers []ConfigLogger, rec *LogRecord) {
 	formatted := ""
 	for _, cLog := range loggers {
 		// Find any function level definitions.
@@ -370,7 +395,18 @@ func (t *Timber) SetFormatter(index int, formatter LogFormatter) {
 
 // Logger interface
 func (t *Timber) prepareAndSend(lvl Level, msg string, depth int) {
-	now := time.Now().UnixNano()
+	select {
+	case <-t.blackHole:
+		// the blackHole always blocks until we close
+		// then it always succeeds so we avoid writing
+		// to the closed channel
+	default:
+		t.recordChan <- t.prepare(lvl, msg, depth+1)
+	}
+}
+
+func (t *Timber) prepare(lvl Level, msg string, depth int) *LogRecord {
+	now := time.Now()
 	pc, file, line, _ := runtime.Caller(depth)
 	funcPath := "_"
 	packagePath := "_"
@@ -379,22 +415,24 @@ func (t *Timber) prepareAndSend(lvl Level, msg string, depth int) {
 		funcPath = me.Name()
 		packagePath = splitPackage(funcPath)
 	}
-	select {
-	case <-t.blackHole:
-		// the blackHole always blocks until we close
-		// then it always succeeds so we avoid writing
-		// to the closed channel
-	default:
-		t.recordChan <- LogRecord{
-			Level:       lvl,
-			Timestamp:   now,
-			SourceFile:  file,
-			SourceLine:  line,
-			Message:     msg,
-			FuncPath:    funcPath,
-			PackagePath: packagePath,
-		}
+
+	return &LogRecord{
+		Level:       lvl,
+		Timestamp:   now,
+		SourceFile:  file,
+		SourceLine:  line,
+		Message:     msg,
+		FuncPath:    funcPath,
+		PackagePath: packagePath,
 	}
+}
+
+// This function allows a Timber instance to be used in the standard library
+// log.SetOutput().  It is not a general Writer interface and assumes one 
+// message per call to Write. All messages are send at level INFO
+func (t *Timber)Write(p []byte) (n int, err error) {
+	t.prepareAndSend(INFO, string(bytes.TrimSpace(p)), 4) 
+	return len(p), nil
 }
 
 func (t *Timber) Finest(arg0 interface{}, args ...interface{}) {

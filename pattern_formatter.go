@@ -181,14 +181,14 @@ func (pf *PatFormatter) compileForLevel(level int) []byte {
 }
 
 // LogFormatter interface
-func (pf *PatFormatter) Format(rec LogRecord) string {
+func (pf *PatFormatter) Format(rec *LogRecord) string {
 	data := pf.getDynamic(rec)
 	//fmt.Printf("%v", data)
 	return fmt.Sprintf(pf.formatCompile, data...)
 }
 
-func (pf *PatFormatter) getDynamic(rec LogRecord) []interface{} {
-	tm := time.Unix(0, rec.Timestamp)
+func (pf *PatFormatter) getDynamic(rec *LogRecord) []interface{} {
+	tm := rec.Timestamp
 	ret := make([]interface{}, 0, 10)
 	for _, dyn := range pf.formatDynamic {
 		switch dyn {

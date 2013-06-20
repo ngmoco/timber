@@ -17,7 +17,7 @@ func TestConsole(t *testing.T) {
 
 func TestFile(t *testing.T) {
 	log := NewTimber()
-	writer := NewFileWriter("test.log")
+	writer, _ := NewFileWriter("test.log")
 	formatter := NewPatFormatter("[%D %T] [%L] %-10x %M")
 	idx := log.AddLogger(ConfigLogger{LogWriter: writer,
 		Level:     FINEST,

@@ -30,10 +30,10 @@ func (fw *FileWriter) Close() {
 
 // This writer has a buffer that I don't ever bother to flush, so it may take a while
 // to see messages
-func NewFileWriter(name string) LogWriter {
+func NewFileWriter(name string) (LogWriter, error) {
 	file, err := os.OpenFile(name, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
-		panic(fmt.Sprintf("TIMBER! Can't open: %v", name))
+		return nil, fmt.Errorf("TIMBER! Can't open %v: %v", name, err)
 	}
 	return NewBufferedWriter(file)
 }
