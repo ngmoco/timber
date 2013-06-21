@@ -45,7 +45,7 @@ func NewSyslogFormatter(format string) *SyslogFormatter {
 
 func (sf *SyslogFormatter) Format(rec *LogRecord) string {
 	msg := sf.pf.Format(rec)
-	return fmt.Sprintf("<%d>%s %s[%d]: %s",
+	return fmt.Sprintf("<%d>%.15s %s[%d]: %s",
 		sf.Facility|sf.SeverityMap[rec.Level],
 		rec.Timestamp.Format(time.Stamp),
 		sf.Tag,
