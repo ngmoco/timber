@@ -7,12 +7,16 @@ import (
 	"time"
 )
 
+type flusher interface {
+	Flush() error
+}
+
 // Use this of you need some buffering, or not
 type BufferedWriter struct {
-	buf    *bufio.Writer
-	writer io.WriteCloser
-	mc     chan string
-	fc     chan int
+	buf       *bufio.Writer
+	writer    io.WriteCloser
+	mc        chan string
+	fc        chan int
 	autoFlush *time.Ticker
 }
 
@@ -32,7 +36,7 @@ func (bw *BufferedWriter) writeLoop() {
 		select {
 		case msg, ok := <-bw.mc:
 			if !ok {
-				bw.buf.Flush()
+				bw.flush()
 				bw.writer.Close()
 				return
 			}
@@ -42,10 +46,20 @@ func (bw *BufferedWriter) writeLoop() {
 				fmt.Printf("TIMBER! epic fail: %v", err)
 			}
 		case <-bw.fc:
-			bw.buf.Flush()
+			bw.flush()
 		case <-bw.autoFlush.C:
-			bw.buf.Flush()
+			bw.flush()
 		}
+	}
+}
+
+// perform actual flush.  only on writeLoop goroutine
+func (bw *BufferedWriter) flush() {
+	// flush buffer
+	bw.buf.Flush()
+	// flush underlying buffer if supported
+	if f, ok := bw.writer.(flusher); ok {
+		f.Flush()
 	}
 }
 
@@ -54,8 +68,9 @@ func (bw *BufferedWriter) LogWrite(msg string) {
 }
 
 // Force flush the buffer
-func (bw *BufferedWriter) Flush() {
+func (bw *BufferedWriter) Flush() error {
 	bw.fc <- 1
+	return nil
 }
 
 func (bw *BufferedWriter) Close() {
