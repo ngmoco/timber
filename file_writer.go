@@ -39,6 +39,10 @@ type FileWriter struct {
 	BaseFilename    string
 	currentFilename string
 	mutex           *sync.RWMutex
+	RotateChan      chan string // defaults to nil.  receives previous filename on rotate
+
+	rotateTicker *time.Ticker
+	rotateReset  chan int
 }
 
 // This writer has a buffer that I don't ever bother to flush, so it may take a while
@@ -76,6 +80,10 @@ func (w *FileWriter) open() error {
 	defer w.mutex.Unlock()
 	if w.wr != nil {
 		w.wr.Close()
+		// send previous filename on rotate chan
+		if c := w.RotateChan; c != nil {
+			c <- w.currentFilename
+		}
 	}
 	w.currentFilename = name
 	w.wr, _ = NewBufferedWriter(output)
@@ -95,8 +103,34 @@ func (w *FileWriter) Flush() error {
 	return w.wr.Flush()
 }
 
+// Close and re-open the file.
+// You should use the timestamp in the filename if you're going to use rotation
 func (w *FileWriter) Rotate() error {
 	return w.open()
+}
+
+// Automatically rotate every `d`
+func (w *FileWriter) RotateEvery(d time.Duration) {
+	// reset ticker
+	w.mutex.Lock()
+	if w.rotateTicker != nil {
+		w.rotateTicker.Stop()
+		w.rotateReset <- 1
+	}
+	w.rotateTicker = time.NewTicker(d)
+	w.mutex.Unlock()
+
+	// trigger a rotate every X
+	go func() {
+		for {
+			select {
+			case <-w.rotateReset:
+				return
+			case <-w.rotateTicker.C:
+				w.Rotate()
+			}
+		}
+	}()
 }
 
 func (w *FileWriter) Close() {
