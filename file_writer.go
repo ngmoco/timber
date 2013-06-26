@@ -36,10 +36,12 @@ func preprocessFilename(name string) string {
 
 type FileWriter struct {
 	wr              *BufferedWriter
+	cwr             *countingWriter
 	BaseFilename    string
 	currentFilename string
 	mutex           *sync.RWMutex
 	RotateChan      chan string // defaults to nil.  receives previous filename on rotate
+	RotateSize      int64       // rotate after RotateSize bytes have been written to the file
 
 	rotateTicker *time.Ticker
 	rotateReset  chan int
@@ -61,13 +63,15 @@ func NewFileWriter(name string) (*FileWriter, error) {
 }
 
 func (w *FileWriter) open() error {
+	// No lock here
 	name := preprocessFilename(w.BaseFilename)
 	file, err := os.OpenFile(name, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
 		return fmt.Errorf("TIMBER! Can't open %v: %v", name, err)
 	}
 
-	var output io.WriteCloser = file
+	var cwr = &countingWriter{file, 0}
+	var output io.WriteCloser = cwr
 	// Wrap in gz writer
 	if strings.HasSuffix(name, ".gz") {
 		output = &gzFileWriter{
@@ -76,6 +80,7 @@ func (w *FileWriter) open() error {
 		}
 	}
 
+	// Locked from here
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 	if w.wr != nil {
@@ -86,6 +91,7 @@ func (w *FileWriter) open() error {
 		}
 	}
 	w.currentFilename = name
+	w.cwr = cwr
 	w.wr, _ = NewBufferedWriter(output)
 
 	return nil
@@ -95,12 +101,15 @@ func (w *FileWriter) LogWrite(m string) {
 	w.mutex.RLock()
 	defer w.mutex.RUnlock()
 	w.wr.LogWrite(m)
+	w.checkSize()
 }
 
 func (w *FileWriter) Flush() error {
 	w.mutex.RLock()
 	defer w.mutex.RUnlock()
-	return w.wr.Flush()
+	e := w.wr.Flush()
+	w.checkSize()
+	return e
 }
 
 // Close and re-open the file.
@@ -133,11 +142,28 @@ func (w *FileWriter) RotateEvery(d time.Duration) {
 	}()
 }
 
+func (w *FileWriter) checkSize() {
+	if w.RotateSize > 0 && w.cwr.bytesWritten >= w.RotateSize {
+		go w.Rotate()
+	}
+}
+
 func (w *FileWriter) Close() {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 	w.wr.Close()
 	w.wr = nil
+}
+
+type countingWriter struct {
+	io.WriteCloser
+	bytesWritten int64
+}
+
+func (w *countingWriter) Write(b []byte) (int, error) {
+	i, e := w.WriteCloser.Write(b)
+	w.bytesWritten += int64(i)
+	return i, e
 }
 
 type gzFileWriter struct {
