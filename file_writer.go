@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"strings"
 	"sync"
@@ -16,6 +17,7 @@ type FilenameFields struct {
 	Hostname string
 	Date     time.Time
 	Pid      int
+	Random   int64
 }
 
 func GetFilenameFields() *FilenameFields {
@@ -24,6 +26,7 @@ func GetFilenameFields() *FilenameFields {
 		Hostname: h,
 		Date:     time.Now(),
 		Pid:      os.Getpid(),
+		Random:   rand.Int63(),
 	}
 }
 
