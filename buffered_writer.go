@@ -18,6 +18,9 @@ type BufferedWriter struct {
 	mc        chan string
 	fc        chan int
 	autoFlush *time.Ticker
+
+	closeChan  chan bool
+	closedChan chan bool
 }
 
 func NewBufferedWriter(writer io.WriteCloser) (*BufferedWriter, error) {
@@ -27,6 +30,8 @@ func NewBufferedWriter(writer io.WriteCloser) (*BufferedWriter, error) {
 	bw.mc = make(chan string)
 	bw.fc = make(chan int)
 	bw.autoFlush = time.NewTicker(time.Second)
+	bw.closeChan = make(chan bool)
+	bw.closedChan = make(chan bool)
 	go bw.writeLoop()
 	return bw, nil
 }
@@ -34,22 +39,34 @@ func NewBufferedWriter(writer io.WriteCloser) (*BufferedWriter, error) {
 func (bw *BufferedWriter) writeLoop() {
 	for {
 		select {
-		case msg, ok := <-bw.mc:
-			if !ok {
-				bw.flush()
-				bw.writer.Close()
-				return
-			}
-			_, err := bw.buf.Write([]byte(msg))
-			if err != nil {
-				// uh-oh... what do i do if logging fails; punt!
-				fmt.Printf("TIMBER! epic fail: %v", err)
-			}
+		case msg := <-bw.mc:
+			bw.writeMessage(msg)
 		case <-bw.fc:
 			bw.flush()
 		case <-bw.autoFlush.C:
 			bw.flush()
+		case <-bw.closeChan:
+			// close requested.  drain message queue and exit
+			for {
+				select {
+				case msg := <-bw.mc:
+					bw.writeMessage(msg)
+				default:
+					bw.flush()
+					bw.writer.Close()
+					close(bw.closedChan)
+					return
+				}
+			}
 		}
+	}
+}
+
+func (bw *BufferedWriter) writeMessage(msg string) {
+	_, err := bw.buf.Write([]byte(msg))
+	if err != nil {
+		// uh-oh... what do i do if logging fails; punt!
+		fmt.Printf("TIMBER! epic fail: %v", err)
 	}
 }
 
@@ -64,7 +81,11 @@ func (bw *BufferedWriter) flush() {
 }
 
 func (bw *BufferedWriter) LogWrite(msg string) {
-	bw.mc <- msg
+	select {
+	case <-bw.closedChan:
+		// writer is closed.  messages are discarded
+	case bw.mc <- msg:
+	}
 }
 
 // Force flush the buffer
@@ -74,5 +95,11 @@ func (bw *BufferedWriter) Flush() error {
 }
 
 func (bw *BufferedWriter) Close() {
-	close(bw.mc)
+	for {
+		select {
+		case bw.closeChan <- true:
+		case <-bw.closedChan:
+			return
+		}
+	}
 }
