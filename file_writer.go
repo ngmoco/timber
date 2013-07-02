@@ -154,6 +154,7 @@ func (w *FileWriter) checkSize() {
 func (w *FileWriter) Close() {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
+	w.wr.Flush()
 	w.wr.Close()
 	w.wr = nil
 }
