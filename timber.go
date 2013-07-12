@@ -1,9 +1,9 @@
 // This is a logger implementation that supports multiple log levels,
-// multiple output destinations with configurable formats and levels 
-// for each.  It also supports granular output configuration to get 
+// multiple output destinations with configurable formats and levels
+// for each.  It also supports granular output configuration to get
 // more detailed logging for specific files/packages. Timber includes
 // support for standard XML or JSON config files to get you started
-// quickly.  It's also easy to configure in code if you want to DIY.  
+// quickly.  It's also easy to configure in code if you want to DIY.
 //
 // Basic use:
 //   import "timber"
@@ -29,7 +29,7 @@
 //			Level:     timber.DEBUG,
 //			Formatter: timber.NewPatFormatter("[%D %T] [%L] %S %M"),
 //		})
-// 
+//
 // XML Config file:
 //		<logging>
 //		  <filter enabled="true">
@@ -428,10 +428,10 @@ func (t *Timber) prepare(lvl Level, msg string, depth int) *LogRecord {
 }
 
 // This function allows a Timber instance to be used in the standard library
-// log.SetOutput().  It is not a general Writer interface and assumes one 
+// log.SetOutput().  It is not a general Writer interface and assumes one
 // message per call to Write. All messages are send at level INFO
-func (t *Timber)Write(p []byte) (n int, err error) {
-	t.prepareAndSend(INFO, string(bytes.TrimSpace(p)), 4) 
+func (t *Timber) Write(p []byte) (n int, err error) {
+	t.prepareAndSend(INFO, string(bytes.TrimSpace(p)), 4)
 	return len(p), nil
 }
 
@@ -472,47 +472,47 @@ func (t *Timber) Log(lvl Level, arg0 interface{}, args ...interface{}) {
 // Print won't work well with a pattern_logger because it explicitly adds
 // its own \n; so you'd have to write your own formatter to remove it
 func (t *Timber) Print(v ...interface{}) {
-	t.prepareAndSend(NONE, fmt.Sprint(v...), t.FileDepth)
+	t.prepareAndSend(DEBUG, fmt.Sprint(v...), t.FileDepth)
 }
 func (t *Timber) Printf(format string, v ...interface{}) {
-	t.prepareAndSend(NONE, fmt.Sprintf(format, v...), t.FileDepth)
+	t.prepareAndSend(DEBUG, fmt.Sprintf(format, v...), t.FileDepth)
 }
 
 // Println won't work well either with a pattern_logger because it explicitly adds
 // its own \n; so you'd have to write your own formatter to not have 2 \n's
 func (t *Timber) Println(v ...interface{}) {
-	t.prepareAndSend(NONE, fmt.Sprintln(v...), t.FileDepth)
+	t.prepareAndSend(DEBUG, fmt.Sprintln(v...), t.FileDepth)
 }
 func (t *Timber) Panic(v ...interface{}) {
 	msg := fmt.Sprint(v...)
-	t.prepareAndSend(NONE, msg, t.FileDepth)
+	t.prepareAndSend(CRITICAL, msg, t.FileDepth)
 	panic(msg)
 }
 func (t *Timber) Panicf(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
-	t.prepareAndSend(NONE, msg, t.FileDepth)
+	t.prepareAndSend(CRITICAL, msg, t.FileDepth)
 	panic(msg)
 }
 func (t *Timber) Panicln(v ...interface{}) {
 	msg := fmt.Sprintln(v...)
-	t.prepareAndSend(NONE, msg, t.FileDepth)
+	t.prepareAndSend(CRITICAL, msg, t.FileDepth)
 	panic(msg)
 }
 func (t *Timber) Fatal(v ...interface{}) {
 	msg := fmt.Sprint(v...)
-	t.prepareAndSend(NONE, msg, t.FileDepth)
+	t.prepareAndSend(CRITICAL, msg, t.FileDepth)
 	t.Close()
 	os.Exit(1)
 }
 func (t *Timber) Fatalf(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
-	t.prepareAndSend(NONE, msg, t.FileDepth)
+	t.prepareAndSend(CRITICAL, msg, t.FileDepth)
 	t.Close()
 	os.Exit(1)
 }
 func (t *Timber) Fatalln(v ...interface{}) {
 	msg := fmt.Sprintln(v...)
-	t.prepareAndSend(NONE, msg, t.FileDepth)
+	t.prepareAndSend(CRITICAL, msg, t.FileDepth)
 	t.Close()
 	os.Exit(1)
 }
