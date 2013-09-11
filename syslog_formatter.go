@@ -1,3 +1,5 @@
+// Same build constraints as log/syslog
+// +build !windows,!plan9
 package timber
 
 import (
