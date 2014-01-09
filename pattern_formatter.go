@@ -119,6 +119,14 @@ func (pf *PatFormatter) compileForLevel(level int) []byte {
 			sprintfFmt = append(sprintfFmt, 's')
 			sprintfFmt = append(sprintfFmt, fmt_str[1:]...)
 			pf.formatDynamic = append(pf.formatDynamic, 'L')
+                case 'l':
+                        sprintfFmt = append(sprintfFmt, '%')
+                        if num != nil {
+                                sprintfFmt = append(sprintfFmt, num...)
+                        }
+                        sprintfFmt = append(sprintfFmt, 's')
+                        sprintfFmt = append(sprintfFmt, fmt_str[1:]...)
+                        pf.formatDynamic = append(pf.formatDynamic, 'l')
 		case 'S':
 			sprintfFmt = append(sprintfFmt, '%')
 			if num != nil {
@@ -202,6 +210,8 @@ func (pf *PatFormatter) getDynamic(rec *LogRecord) []interface{} {
 			ret = append(ret, parseDate(tm)...)
 		case 'L':
 			ret = append(ret, LevelStrings[rec.Level])
+                case 'l':
+                        ret = append(ret, LongLevelStrings[rec.Level])
 		case 'S':
 			ret = append(ret, parseSourceLong(rec.SourceFile, rec.SourceLine))
 		case 's':
