@@ -7,8 +7,8 @@ import (
 )
 
 var lr = &LogRecord{
-	Level:       INFO,
-	Timestamp:   time.Unix(0, 1319150347383485000),
+	Level:       WARNING,
+	Timestamp:   time.Unix(0, 1319230347383485000),
 	SourceFile:  "/blah/der/some_file.go",
 	SourceLine:  7,
 	Message:     "hellooooo nurse!",
@@ -20,11 +20,11 @@ var optiontests = []struct {
 	in  string
 	out string
 }{
-	{"%T", "15:39:07.383\n"},
-	{"%t", "15:39:07\n"},
-	{"%D", "2011-10-20\n"},
-	{"%d", "2011/10/20\n"},
-	{"%-10L", "INFO      \n"},
+	{"%T", "21:52:27.383\n"},
+	{"%t", "21:52:27\n"},
+	{"%D", "2011-10-21\n"},
+	{"%d", "2011/10/21\n"},
+	{"%-10L", "WARN      \n"},
 	{"%S", "/blah/der/some_file.go:7\n"},
 	{"%s", "some_file.go:7\n"},
 	{"%x", "some_file\n"},
@@ -49,7 +49,7 @@ func TestOptions(t *testing.T) {
 
 func TestWorstPatternFormat(t *testing.T) {
 	in := "short:[%d %t] good:[%D %T] levelPadded:[%-10L] long:%S short:%s xs:%10x Msg:%M Fnc:%P Pkg:%p"
-	out := "short:[2011/10/20 15:39:07] good:[2011-10-20 15:39:07.383] levelPadded:[INFO      ] " +
+	out := "short:[2011/10/21 21:52:27] good:[2011-10-21 21:52:27.383] levelPadded:[WARN      ] " +
 		"long:/blah/der/some_file.go:7 short:some_file.go:7 xs: some_file Msg:hellooooo nurse! Fnc:hi.Zoot Pkg:hi\n"
 	pf := NewPatFormatter(in)
 	verify(t, in, pf.Format(lr), out)
@@ -57,9 +57,16 @@ func TestWorstPatternFormat(t *testing.T) {
 
 func TestRealPatternFormat(t *testing.T) {
 	in := "[%D %T] [%L] %-10x %M"
-	out := "[2011-10-20 15:39:07.383] [INFO] some_file  hellooooo nurse!\n"
+	out := "[2011-10-21 21:52:27.383] [WARN] some_file  hellooooo nurse!\n"
 	pf := NewPatFormatter(in)
 	verify(t, in, pf.Format(lr), out)
+}
+
+func TestRealPatternFormatLong(t *testing.T) {
+        in := "[%D %T] [%l] %-10x %M"
+        out := "[2011-10-21 21:52:27.383] [WARNING] some_file  hellooooo nurse!\n"
+        pf := NewPatFormatter(in)
+        verify(t, in, pf.Format(lr), out)
 }
 
 func BenchmarkWorstPatternFormat(b *testing.B) {
@@ -72,8 +79,8 @@ func BenchmarkWorstPatternFormat(b *testing.B) {
 func BenchmarkWorstJustSprintf(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		fmt.Sprintf("short:[%d/%02d/%02d %02d:%02d:%02d] good:[%d-%02d-%02d %02d:%02d:%02d.%03d] "+
-			"levelPadded:[%-10s] long:%s short:%s xs:%10s Msg:%s Fnc:%s Pkg:%s\n", 2011, 10, 20, 15, 39, 7,
-			2011, 10, 20, 15, 39, 7, 383, "INFO", "/blah/der/some_file.go:7", "some_file.go:7", "some_file", "hellooooo nurse!", "hi.Zoot", "hi")
+			"levelPadded:[%-10s] long:%s short:%s xs:%10s Msg:%s Fnc:%s Pkg:%s\n", 2011, 10, 21, 23, 39, 7,
+			2011, 10, 21, 23, 39, 7, 383, "WARN", "/blah/der/some_file.go:7", "some_file.go:7", "some_file", "hellooooo nurse!", "hi.Zoot", "hi")
 	}
 }
 
@@ -86,6 +93,6 @@ func BenchmarkRealPatternFormat(b *testing.B) {
 
 func BenchmarkReallJustSprintf(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		fmt.Sprintf("[%d-%02d-%02d %02d:%02d:%02d.%03d] [%s] %-10s %s\n", 2011, 10, 20, 15, 39, 7, 383, "INFO", "some_file", "hellooooo nurse!")
+		fmt.Sprintf("[%d-%02d-%02d %02d:%02d:%02d.%03d] [%s] %-10s %s\n", 2011, 10, 21, 23, 39, 7, 383, "WARN", "some_file", "hellooooo nurse!")
 	}
 }
