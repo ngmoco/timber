@@ -136,7 +136,9 @@ const (
 const DefaultFileDepth int = 3
 
 // What gets printed for each Log level
-var LevelStrings = [...]string{"", "FNST", "FINE", "DEBG", "TRAC", "INFO", "WARN", "EROR", "CRIT"}
+// var LevelStrings = [...]string{"", "FNST", "FINE", "DEBG", "TRAC", "INFO", "WARN", "EROR", "CRIT"}
+// Some sysadmins like to grep -i err
+var LevelStrings = [...]string{"", "FNEST", "FINE ", "DEBUG", "TRACE", "INFO ", "WARN ", "ERROR", "CRIT "}
 
 // Full level names
 var LongLevelStrings = []string{
