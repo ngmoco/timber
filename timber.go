@@ -236,6 +236,7 @@ type ConfigLogger struct {
 type MultiLogger interface {
 	// returns an int that identifies the logger for future calls to SetLevel and SetFormatter
 	AddLogger(logger ConfigLogger) int
+	SetLogger(index int, logger ConfigLogger)
 	// dynamically change level or format
 	SetLevel(index int, lvl Level)
 	SetFormatter(index int, formatter LogFormatter)
@@ -273,6 +274,7 @@ type timberAction int
 
 const (
 	actionAdd timberAction = iota
+	actionSet
 	actionModify
 	actionQuit
 )
@@ -310,6 +312,8 @@ func (t *Timber) asyncLumberJack() {
 			case actionAdd:
 				loggers = append(loggers, cfg.Cfg)
 				cfg.Ret <- (len(loggers) - 1)
+			case actionSet:
+				loggers[cfg.Index] = cfg.Cfg
 			case actionModify:
 			case actionQuit:
 				close(t.blackHole)
@@ -371,6 +375,13 @@ func (t *Timber) AddLogger(logger ConfigLogger) int {
 	tc := timberConfig{Action: actionAdd, Cfg: logger, Ret: tcChan}
 	t.writerConfigChan <- tc
 	return <-tcChan
+}
+
+
+func (t *Timber) SetLogger(index int, logger ConfigLogger) {
+	tcChan := make(chan int, 1) // buffered
+	tc := timberConfig{Action: actionSet, Cfg: logger, Ret: tcChan}
+	t.writerConfigChan <- tc
 }
 
 // MultiLogger interface
