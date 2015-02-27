@@ -593,15 +593,26 @@ func Warn(arg0 interface{}, args ...interface{}) error     { return Global.Warn(
 func Error(arg0 interface{}, args ...interface{}) error    { return Global.Error(arg0, args...) }
 func Critical(arg0 interface{}, args ...interface{}) error { return Global.Critical(arg0, args...) }
 func Log(lvl Level, arg0 interface{}, args ...interface{}) { Global.Log(lvl, arg0, args...) }
-func Print(v ...interface{})                               { Global.Print(v...) }
-func Printf(format string, v ...interface{})               { Global.Printf(format, v...) }
-func Println(v ...interface{})                             { Global.Println(v...) }
-func Panic(v ...interface{})                               { Global.Panic(v...) }
-func Panicf(format string, v ...interface{})               { Global.Panicf(format, v...) }
-func Panicln(v ...interface{})                             { Global.Panicln(v...) }
-func Fatal(v ...interface{})                               { Global.Fatal(v...) }
-func Fatalf(format string, v ...interface{})               { Global.Fatalf(format, v...) }
-func Fatalln(v ...interface{})                             { Global.Fatalln(v...) }
+
+func Finestf(arg0 interface{}, args ...interface{})         { Global.Finestf(arg0, args...) }
+func Finef(arg0 interface{}, args ...interface{})           { Global.Finef(arg0, args...) }
+func Debugf(arg0 interface{}, args ...interface{})          { Global.Debugf(arg0, args...) }
+func Tracef(arg0 interface{}, args ...interface{})          { Global.Tracef(arg0, args...) }
+func Infof(arg0 interface{}, args ...interface{})           { Global.Infof(arg0, args...) }
+func Warnf(arg0 interface{}, args ...interface{}) error     { return Global.Warnf(arg0, args...) }
+func Errorf(arg0 interface{}, args ...interface{}) error    { return Global.Errorf(arg0, args...) }
+func Criticalf(arg0 interface{}, args ...interface{}) error { return Global.Criticalf(arg0, args...) }
+func Logf(lvl Level, arg0 interface{}, args ...interface{}) { Global.Logf(lvl, arg0, args...) }
+
+func Print(v ...interface{})                 { Global.Print(v...) }
+func Printf(format string, v ...interface{}) { Global.Printf(format, v...) }
+func Println(v ...interface{})               { Global.Println(v...) }
+func Panic(v ...interface{})                 { Global.Panic(v...) }
+func Panicf(format string, v ...interface{}) { Global.Panicf(format, v...) }
+func Panicln(v ...interface{})               { Global.Panicln(v...) }
+func Fatal(v ...interface{})                 { Global.Fatal(v...) }
+func Fatalf(format string, v ...interface{}) { Global.Fatalf(format, v...) }
+func Fatalln(v ...interface{})               { Global.Fatalln(v...) }
 
 func AddLogger(logger ConfigLogger) int { return Global.AddLogger(logger) }
 func Close()                            { Global.Close() }
