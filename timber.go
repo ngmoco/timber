@@ -186,6 +186,17 @@ type Logger interface {
 	Fatal(v ...interface{})
 	Fatalf(format string, v ...interface{})
 	Fatalln(v ...interface{})
+
+	// and govet-friendly versions of log4go
+	Finestf(arg0 interface{}, args ...interface{})
+	Finef(arg0 interface{}, args ...interface{})
+	Debugf(arg0 interface{}, args ...interface{})
+	Tracef(arg0 interface{}, args ...interface{})
+	Infof(arg0 interface{}, args ...interface{})
+	Warnf(arg0 interface{}, args ...interface{}) error
+	Errorf(arg0 interface{}, args ...interface{}) error
+	Criticalf(arg0 interface{}, args ...interface{}) error
+	Logf(lvl Level, arg0 interface{}, args ...interface{})
 }
 
 // Not used
@@ -377,7 +388,6 @@ func (t *Timber) AddLogger(logger ConfigLogger) int {
 	return <-tcChan
 }
 
-
 func (t *Timber) SetLogger(index int, logger ConfigLogger) {
 	tcChan := make(chan int, 1) // buffered
 	tc := timberConfig{Action: actionSet, Cfg: logger, Ret: tcChan}
@@ -477,6 +487,42 @@ func (t *Timber) Critical(arg0 interface{}, args ...interface{}) error {
 	return errors.New(msg)
 }
 func (t *Timber) Log(lvl Level, arg0 interface{}, args ...interface{}) {
+	t.prepareAndSend(lvl, fmt.Sprintf(arg0.(string), args...), t.FileDepth)
+}
+
+// The govet printf family of warnings triggers on Erorr() and similar containing format strings
+// Add more golike Foof() formatters. Other methods should be considered deprecated
+func (t *Timber) Finestf(arg0 interface{}, args ...interface{}) {
+	t.prepareAndSend(FINEST, fmt.Sprintf(arg0.(string), args...), t.FileDepth)
+}
+func (t *Timber) Finef(arg0 interface{}, args ...interface{}) {
+	t.prepareAndSend(FINE, fmt.Sprintf(arg0.(string), args...), t.FileDepth)
+}
+func (t *Timber) Debugf(arg0 interface{}, args ...interface{}) {
+	t.prepareAndSend(DEBUG, fmt.Sprintf(arg0.(string), args...), t.FileDepth)
+}
+func (t *Timber) Tracef(arg0 interface{}, args ...interface{}) {
+	t.prepareAndSend(TRACE, fmt.Sprintf(arg0.(string), args...), t.FileDepth)
+}
+func (t *Timber) Infof(arg0 interface{}, args ...interface{}) {
+	t.prepareAndSend(INFO, fmt.Sprintf(arg0.(string), args...), t.FileDepth)
+}
+func (t *Timber) Warnf(arg0 interface{}, args ...interface{}) error {
+	msg := fmt.Sprintf(arg0.(string), args...)
+	t.prepareAndSend(WARNING, msg, t.FileDepth)
+	return errors.New(msg)
+}
+func (t *Timber) Errorf(arg0 interface{}, args ...interface{}) error {
+	msg := fmt.Sprintf(arg0.(string), args...)
+	t.prepareAndSend(ERROR, msg, t.FileDepth)
+	return errors.New(msg)
+}
+func (t *Timber) Criticalf(arg0 interface{}, args ...interface{}) error {
+	msg := fmt.Sprintf(arg0.(string), args...)
+	t.prepareAndSend(CRITICAL, msg, t.FileDepth)
+	return errors.New(msg)
+}
+func (t *Timber) Logf(lvl Level, arg0 interface{}, args ...interface{}) {
 	t.prepareAndSend(lvl, fmt.Sprintf(arg0.(string), args...), t.FileDepth)
 }
 
